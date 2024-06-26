@@ -1,0 +1,59 @@
+/*******************************************************************************
+* Project: Worker Scheduler
+* README
+* Author: Will Cordray, wcordr01
+*******************************************************************************/
+
+Program Purpose:
+---------------
+
+    The purpose of OH scheduler is to schedule workers to shifts (though it can 
+    easily be generalized), with a focus on creating the most desirable 
+    schedule using worker happiness with that shift, distribution of the number 
+    of shifts per worker, and user defined constants for things like penalties and 
+    bonuses for characteristics about a schedule.
+
+Compile/run:
+-----------
+
+    Compile command: "make"
+
+    Run command: "./workerscheduler [directory of worker input files] (optional: --seed=)"
+
+
+Usage Notes:
+-----------
+    Penalties and Bonuses:
+        all priorities (the desirability of the shift to the worker) are 
+        normalized to 1 (with the highest priority being 1, and the lowest 
+        being 0), and these penalties / bonuses apply to these normalized 
+        values. For example, a penalty of 2 is equivalent to two shifts 
+        going from the highest priority to the lowest
+    
+    Priority ranges:
+        all the priority levels for shifts should be positive and the Program
+        works best when the range between the highest priority and the lowest
+        priority is less than 1,000 (though there is no hard restriction)
+    
+    Search Priority:
+        In order of importance when creating a schedule, the program fills all
+        shifts with the correct amount of workers (guaranteed), make sure all workers
+        are evenly distributed with the number of shifts relative to their
+        desired number of shifts (not technically guaranteed, but rarely fails),
+        and finally maximize the "happiness" of the workers accounting for 
+        their desirability for the shift, as well as any penalties and bonuses.
+
+        The main program runs the search multiple times and selects the best
+        result, based on the proportion constants (average happiness, lowest 
+        happiness, distribution of shifts).
+    
+    Miscellaneous notes:
+        Worker names must be unique, and spaces are allowed
+        the file workerLikes.txt contains all the worker pairings, and is a reserved filename // TODO: try to remove this restriction
+
+
+Acknowledgments:
+---------------
+
+    Jackson Parsells for complaining about scheduling, and thus giving me the
+    idea for this project
