@@ -12,27 +12,10 @@ WorkerInputData::WorkerInputData(string inputDirectory) {
 
     // read in data from files
     readFiles(inputDirectory);
-    readLikes(inputDirectory);
 
     buildWorkersAvailable();
 
     validate(cerr);
-}
-
-// adds timeslots to a vector containing all of the timeslots available for
-// each shift.
-void WorkerInputData::buildWorkersAvailable() {
-    workersAvailable = vector<vector<vector<TimeSlotNode *>>>(NUM_DAYS, vector<vector<TimeSlotNode *>>(MAX_SHIFTS));
-    for (size_t i = 0; i < workerList.size(); i++) {  // loop all workers
-        // loop all Shifts
-        for (size_t j = 0; j < workerList[i]->getAvailability()->size(); j++) {
-            TimeSlotNode *newShift = (*workerList[i]->getAvailability())[j];
-            int day = newShift->get_day();
-            int shift = newShift->get_shift();
-
-            workersAvailable[day][shift].push_back(newShift);
-        }
-    }
 }
 
 // copy constructor
@@ -48,56 +31,117 @@ WorkerInputData::WorkerInputData(const WorkerInputData &other) {
     }
 }
 
+
 // TODO: is there a way to do this without using the directory iterator?
 void WorkerInputData::readFiles(string &inputDirectory) {
     if (inputDirectory[inputDirectory.size() - 1] != '/') {
         inputDirectory += '/';  // make sure always ends in a slash
     }
 
+    vector<vector<string>> likes;
     for (const auto &entry : filesystem::directory_iterator(inputDirectory)) {
         string filename = entry.path();
-        if (filename == inputDirectory + "workerLikes.txt") {
-            continue;
-        }
 
         ifstream infile;
         open_or_die(infile, filename);
 
         string name;
-        int max_shifts;
-        getline(infile, name);
-        infile >> max_shifts;
-        WorkerNode *newWorker = new WorkerNode(name, max_shifts);
+        int maxShifts;
+        readHeader(infile, name, maxShifts);
+        WorkerNode *newWorker = new WorkerNode(name, maxShifts);
 
-        string dayName;
-        string shiftName;
-        int day;
-        int shift;
-        double priority;
-        while (infile >> dayName) {
-            infile >> shiftName >> priority;
 
-            day = dayString_to_int(dayName);
-            if (day == -1) {
-                cerr << "Invalid Day Name: " << dayName << " in file "
-                     << filename << endl;
-                continue;
-            }
-
-            shift = shiftString_to_int(shiftName);
-            if (shift == -1) {
-                cerr << "Invalid Shift Name: " << shiftName << " in file "
-                     << filename << endl;
-                continue;
-            }
-
-            newWorker->addShift(newWorker, day, shift, priority);
-        }
+        readShifts(infile, filename, newWorker); // populates worker node
+        likes.push_back(readLikes(infile));
+        
         workerList.push_back(newWorker);
+    }
+
+    processLikes(likes);
+}
+
+void WorkerInputData::readHeader(ifstream &infile, string &name, int &maxShifts) {
+        getline(infile, name);
+        infile >> maxShifts;
+
+        // TODO: this is a bit of a hack
+        char c;
+        infile.get(c); // grab the trailing newlines
+        infile.get(c);
+}
+
+void WorkerInputData::readShifts(ifstream &infile, string filename, WorkerNode *currWorker) {
+    string lineContents;
+
+    string dayName;
+    string shiftName;
+    double priority;
+
+    int day;
+    int shift;
+    while (getline(infile, lineContents) && lineContents != "") {
+        istringstream line(lineContents);
+        line >> dayName >> shiftName >> priority;
+
+        day = dayStringToInt(dayName);
+        if (day == -1) {
+            cerr << "Invalid Day Name: " << dayName << " in file "
+                    << filename << endl;
+            continue;
+        }
+
+        shift = shiftStringToInt(shiftName);
+        if (shift == -1) {
+            cerr << "Invalid Shift Name: " << shiftName << " in file "
+                    << filename << endl;
+            continue;
+        }
+
+        if (line.fail()) { // most likely couldn't read double
+            cerr << "File reading fail in " << filename 
+                 << ". Most likely couldn't read priority" << endl;
+            continue;
+        }
+
+        currWorker->addShift(currWorker, day, shift, priority);
     }
 }
 
-int dayString_to_int(string dayName) {
+vector<string> WorkerInputData::readLikes(ifstream &infile) {
+    vector<string> currLikes;
+    string name;
+    while (getline(infile, name)) {
+        currLikes.push_back(name);
+    }
+    return currLikes;
+}
+
+void WorkerInputData::processLikes(vector<vector<string>> &likes) {
+    for (size_t i = 0; i < likes.size(); i++) {
+        for (string name : likes[i]) {
+            WorkerNode *liked = findWorker(name);
+            if (liked != nullptr) {
+                workerList[i]->addLikedCoworker(liked);
+            } else {
+                cerr << name << ", liked by " << workerList[i]->getName() 
+                     << ", is was not found" << endl;
+            }
+        }
+    }
+}
+
+WorkerNode *WorkerInputData::findWorker(string name) {
+    for (size_t i = 0; i < workerList.size(); i++) {
+        if (workerList[i]->getName() == name) {
+            return workerList[i];
+        }
+    }
+    return nullptr;
+}
+
+
+
+int WorkerInputData::dayStringToInt(string dayName) {
     for (int i = 0; i < NUM_DAYS; i++) {
         if (dayName == dayNames[i]) {
             return i;
@@ -106,7 +150,7 @@ int dayString_to_int(string dayName) {
     return -1;
 }
 
-int shiftString_to_int(string shiftName) {
+int WorkerInputData::shiftStringToInt(string shiftName) {
     for (int i = 0; i < MAX_SHIFTS; i++) {
         if (shiftName == shiftNames[i]) {
             return i;
@@ -114,75 +158,6 @@ int shiftString_to_int(string shiftName) {
     }
     return -1;
 }
-
-// TODO: the way these files are formatted is bad. Why not just have it the same way as the input files where there is only a space that separates it? The information should probably just be put into the main info file, seperated by whitespace
-void WorkerInputData::readLikes(string inputDirectory) {
-    // input directory guaranteed to have slash because called after readFile
-    // which fixes the slash problem // TODO: this is a dubious claim that might change with further development. We should just add the check anyway? What is the least bad way to do this? Have a wrapper function that adds the slash then calls both? Is the slash even necessary?
-    for (const auto &entry : filesystem::directory_iterator(inputDirectory)) {
-        string filename = entry.path();
-        if (filename == inputDirectory + "workerLikes.txt") {
-            ifstream infile;
-            open_or_die(infile, filename);
-            string line;
-            while (getline(infile, line)) {
-                if (line == "") {  // blank lines allowed
-                    continue;
-                }
-                string worker1;
-                string worker2;
-                size_t i = 0;
-                while (i < line.size() and line[i] != ':') {
-                    worker1 += line[i];
-                    i++;
-                }
-                if (i == line.size()) {
-                    throw runtime_error(
-                        "In workerLikes.txt, there is a line with no ':'");
-                }
-
-                if (worker1.size() == 0) {
-                    throw runtime_error(
-                        "In workerLikes.txt, there is a ':' as the first "
-                        "character");
-                }
-
-                worker1.resize(worker1.size() - 1);  // remove that trailing space
-
-                // +3 because want to start after the " : "
-                worker2 = line.substr(worker1.size() + 3, line.size() - worker1.size() - 3);
-
-                if (worker2.size() == 0) {
-                    throw runtime_error(
-                        "In workerLikes.txt, there is a ':' as the last character");
-                }
-
-                WorkerNode *WorkerNode1 = nullptr;
-                WorkerNode *WorkerNode2 = nullptr;
-                for (auto it = workerList.begin(); it != workerList.end(); it++) {
-                    if ((*it)->getName() == worker1) {
-                        WorkerNode1 = *it;
-                    } else if ((*it)->getName() == worker2) {
-                        WorkerNode2 = *it;
-                    }
-                }
-
-                if (WorkerNode1 == nullptr) {
-                    throw runtime_error("In workerLikes.txt, name " + worker1 +
-                                        " not found");
-                }
-                if (WorkerNode2 == nullptr) {
-                    throw runtime_error("In workerLikes.txt, name " + worker2 +
-                                        " not found");
-                }
-                WorkerNode1->addLikedCoworker(WorkerNode2);
-            }
-        }
-    }
-}
-
-
-
 
 /*
  * name:      open_or_die
@@ -201,6 +176,24 @@ void WorkerInputData::open_or_die(streamtype &stream, std::string fileName) {
 
 
 
+// adds timeslots to a vector containing all of the timeslots available for
+// each shift.
+void WorkerInputData::buildWorkersAvailable() {
+    workersAvailable = vector<vector<vector<TimeSlotNode *>>>(NUM_DAYS, vector<vector<TimeSlotNode *>>(MAX_SHIFTS));
+    for (size_t i = 0; i < workerList.size(); i++) {  // loop all workers
+        // loop all Shifts
+        for (size_t j = 0; j < workerList[i]->getAvailability()->size(); j++) {
+            TimeSlotNode *newShift = (*workerList[i]->getAvailability())[j];
+            int day = newShift->get_day();
+            int shift = newShift->get_shift();
+
+            workersAvailable[day][shift].push_back(newShift);
+        }
+    }
+}
+
+
+
 // checks to see if there is any chance of a valid solution, as well is for
 // some other basic pitfalls
 // if ask user for input is true, then asks user if they want to decrease the
@@ -210,6 +203,37 @@ void WorkerInputData::validate(ostream &output) {
     validateNoRepeatWorkers();
     validateNoRepeatBlocks();
     validateWorkersRequired(output);
+}
+
+void WorkerInputData::validateNoRepeatWorkers() {
+    unordered_set<string> namesSoFar;
+    for (auto it = workerList.begin(); it != workerList.end(); it++) {
+        string currName = (*it)->getName();
+        if (namesSoFar.find(currName) != namesSoFar.end()) {  // found repeat
+            throw runtime_error("More than 1 worker with name " + currName);
+        }
+        namesSoFar.insert(currName);
+    }
+}
+
+void WorkerInputData::validateNoRepeatBlocks() {
+    for (int i = 0; i < NUM_DAYS; i++) {
+        for (int j = 0; j < MAX_SHIFTS; j++) {
+            unordered_set<string> namesSoFar;
+            for (auto k = workersAvailable[i][j].begin();
+                 k != workersAvailable[i][j].end(); k++) {
+                auto found = namesSoFar.find((*k)->get_parent()->getName());
+                if (found != namesSoFar.end()) {  // found repeat
+                    string errorMessage = "Worker " +
+                                          (*k)->get_parent()->getName() +
+                                          " has duplicate blocks in " +
+                                          dayNames[i] + " " + shiftNames[j];
+                    throw runtime_error(errorMessage);
+                }
+                namesSoFar.insert((*k)->get_parent()->getName());
+            }
+        }
+    }
 }
 
 void WorkerInputData::validateWorkersRequired(ostream &output) {
@@ -240,37 +264,6 @@ void WorkerInputData::validateWorkersRequired(ostream &output) {
         cin >> response;
         if (response != "y") {
             throw runtime_error("Invalid Schedule. Too few workers available for shift(s)");
-        }
-    }
-}
-
-void WorkerInputData::validateNoRepeatWorkers() {
-    unordered_set<string> namesSoFar;
-    for (auto it = workerList.begin(); it != workerList.end(); it++) {
-        string currName = (*it)->getName();
-        if (namesSoFar.find(currName) != namesSoFar.end()) {  // found repeat
-            throw runtime_error("More than 1 worker with name " + currName);
-        }
-        namesSoFar.insert(currName);
-    }
-}
-
-void WorkerInputData::validateNoRepeatBlocks() {
-    for (int i = 0; i < NUM_DAYS; i++) {
-        for (int j = 0; j < MAX_SHIFTS; j++) {
-            unordered_set<string> namesSoFar;
-            for (auto k = workersAvailable[i][j].begin();
-                 k != workersAvailable[i][j].end(); k++) {
-                auto found = namesSoFar.find((*k)->get_parent()->getName());
-                if (found != namesSoFar.end()) {  // found repeat
-                    string errorMessage = "Worker " +
-                                          (*k)->get_parent()->getName() +
-                                          " has duplicate blocks in " +
-                                          dayNames[i] + " " + shiftNames[j];
-                    throw runtime_error(errorMessage);
-                }
-                namesSoFar.insert((*k)->get_parent()->getName());
-            }
         }
     }
 }

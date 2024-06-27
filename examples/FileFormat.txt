@@ -1,0 +1,12 @@
+Name
+Number of desired shifts
+
+dayName shiftName priority
+dayName shiftName priority
+dayName shiftName priority
+...
+
+Liked Coworker
+Liked Coworker
+Liked Coworker
+...

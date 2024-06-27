@@ -5,6 +5,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <filesystem>
 #include <unordered_set>
 
@@ -29,24 +30,29 @@ public:
 
 private:
     vector<vector<int>> workersPerShift; // [NUM_DAYS][MAX_SHIFTS]
-
     vector<WorkerNode *> workerList;
     vector<vector<vector<TimeSlotNode *>>> workersAvailable; // [NUM_DAYS][MAX_SHIFTS]
 
 
-    void buildWorkersAvailable();
+
     void readFiles(string &inputDirectory);
-    void readLikes(string inputDirectory);
+    void readHeader(ifstream &infile, string &name, int &maxShifts);
+    void readShifts(ifstream &infile, string filename, WorkerNode *currWorker);
+    vector<string> readLikes(ifstream &infile);
+    void processLikes(vector<vector<string>> &likes);
 
-
+    WorkerNode *findWorker(string name);
+    int dayStringToInt(string dayName);
+    int shiftStringToInt(string shiftName);
     template <typename streamtype>
     void open_or_die(streamtype &stream, std::string fileName);
 
+    void buildWorkersAvailable();
 
     void validate(ostream &output);
-    void validateWorkersRequired(ostream &output);
     void validateNoRepeatWorkers();
     void validateNoRepeatBlocks();
+    void validateWorkersRequired(ostream &output);
 };
 
 #endif

@@ -5,7 +5,7 @@
 ### Author: Will Cordray
 
 
-CXX      = clang++
+CXX      = clang++ -O2
 CXXFLAGS = -Iinclude -std=gnu++17 -g3 -Wall -Wextra -Wpedantic -Wshadow
 
 # TARGET = workerScheduler
