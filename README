@@ -1,0 +1,73 @@
+/*******************************************************************************
+* Project: Worker Scheduler
+* README
+* Author: Will Cordray, William.E.Cordray@gmail.com
+*******************************************************************************/
+
+Program Purpose:
+---------------
+
+    Automates the process of scheduling workers into timeshifts. The tool first 
+    creates a valid schedule based on the number of workers needed per shift 
+    and availability, then optimizes for considerations like workers' shift 
+    preferences, double shifts, and preferred coworkers.
+
+Compile/run:
+-----------
+
+    Compile command: "make" (should work across platforms)
+
+    Run Command:
+       "./workerscheduler [directory of worker input files] (optional: --seed=)"
+
+
+Usage:
+-----
+    See file include/SchedulerData.h to define the desired schedule, 
+    as well as change the user defined values.
+
+
+    Penalties and Bonuses:
+        User Defined Values: double shift penalty (two shifts in a row), 
+                             double day penalty (two shifts in one day), 
+                             coworker preference bonus.
+
+        All priorities (the desirability of the shift to the worker) are 
+        normalized from 0 to 1, and the penalties / bonuses apply to these 
+        normalized values. For example, a penalty of 2 is equivalent to two 
+        shifts going from the highest priority to the lowest
+    
+
+    Search Priority:
+        User Defined Values: proportion of final score from the average 
+        happiness of the workers, the happiness of the least happy worker, 
+        and the range between the most underbooked and most overbooker worker.
+
+        Order of Importance:
+            1. Ensure all shifts have the correct number of workers.
+            2. Evenly distribute shifts among workers relative to their desired 
+               number.
+            3. Maximize worker happiness considering shift desirability and 
+               any penalties or bonuses.
+
+        The program performs multiple searches and selects the best result 
+        based on the defined proportion constants.
+    
+    
+    Miscellaneous notes:
+        Worker names must be unique, and spaces are allowed
+
+Acknowledgments:
+---------------
+    Special thanks to Jackson Parsells for inspiring this project through their 
+    scheduling complaints.
+
+License:
+-------
+    This project is licensed under the MIT License. 
+    See the LICENSE file for details
+
+Contact:
+-------
+    For any questions or suggestions, please contact Will Cordray at 
+    William.E.Cordray@gmail.com.
