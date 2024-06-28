@@ -2,12 +2,12 @@
 
 TimeSlotNode::TimeSlotNode(WorkerNode *newParent, int newDay, int newShift,
                            double newPriority) {
-    parent = newParent;
+    restoreDefaults();
 
+    parent = newParent;
     day = newDay;
     shift = newShift;
     truePriority = newPriority;
-    restoreDefaults();
 }
 
 void TimeSlotNode::restoreDefaults() {
@@ -86,7 +86,7 @@ double TimeSlotNode::calcBonus(
     //     Note: Bonus applies linearly to how many people they are on shift
     //     with that they like
 
-    unordered_set<WorkerNode *> likes = *parent->getLikedCoworkers();
+    unordered_set<WorkerNode *> likes = parent->getLikedCoworkers();
     for (auto toMatch = workers[day][shift].begin(); 
          toMatch != workers[day][shift].end(); toMatch++) {
         if (likes.find((*toMatch)->getParent()) != likes.end()) {

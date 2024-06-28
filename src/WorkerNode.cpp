@@ -1,19 +1,14 @@
 #include "WorkerNode.h"
 
 WorkerNode::WorkerNode(string newName, int newMaxShifts) {
+    restoreDefaults();
+
     name = newName;
     maxShifts = newMaxShifts;
-    shiftsRemaining = maxShifts;
-    relativeBooking = -1 * maxShifts;
-    seen = false;
-    noPath = false;
 }
 
 void WorkerNode::resetValues() {
-    shiftsRemaining = maxShifts; // todo: pull this out into seperate function (reused code from constructor)
-    relativeBooking = -1 * maxShifts;
-    seen = false;
-    noPath = false;
+    restoreDefaults();
 
     timesAllocated.clear();
     // reset the values of the time slot nodes;
@@ -22,28 +17,26 @@ void WorkerNode::resetValues() {
     }
 }
 
-void WorkerNode::set_seen(bool newValue) {
-    seen = newValue;
+void WorkerNode::restoreDefaults() {
+    shiftsRemaining = maxShifts;
+    relativeBooking = -1 * maxShifts;
+    noPath = false;
 }
 
-bool WorkerNode::get_seen() {
-    return seen;
-}
-
-void WorkerNode::set_noPath(bool newValue) {
+void WorkerNode::setNoPath(bool newValue) {
     noPath = newValue;
 }
 
-bool WorkerNode::get_noPath() {
+bool WorkerNode::getNoPath() {
     return noPath;
 }
 
-const vector<TimeSlotNode *> *WorkerNode::getAvailability() const {
-    return &timesAvailable;
+const vector<TimeSlotNode *> &WorkerNode::getAvailability() const {
+    return timesAvailable;
 }
 
-const unordered_set<WorkerNode *> *WorkerNode::getLikedCoworkers() const {
-    return &likedCoworkers;
+const unordered_set<WorkerNode *> &WorkerNode::getLikedCoworkers() const {
+    return likedCoworkers;
 }
 
 const vector<TimeSlotNode *> &WorkerNode::getAllocations() const {
@@ -72,10 +65,8 @@ void WorkerNode::updateShiftsRemaining(int updateFactor) {
 }
 
 
-// TODO: the usage of thisWorker is kinda ugly. Another way to get permanent
-// pointer to self?
-void WorkerNode::addShift(WorkerNode *thisWorker, int day, int shift, double priority) {
-    TimeSlotNode *newShift = new TimeSlotNode(thisWorker, day, shift, priority);
+void WorkerNode::addShift(int day, int shift, double priority) {
+    TimeSlotNode *newShift = new TimeSlotNode(this, day, shift, priority);
 
     timesAvailable.push_back(newShift);
 }
@@ -84,7 +75,10 @@ void WorkerNode::addLikedCoworker(WorkerNode *newWorker) {
     likedCoworkers.insert(newWorker);
 }
 
-void WorkerNode::allocateBlock(TimeSlotNode *toChoose, bool &problem) {
+void WorkerNode::allocateBlock(TimeSlotNode *toChoose) {
+    updateShiftsRemaining(-1); // removing a block
+    toChoose->setUsed(true);
+
     for (auto it = timesAvailable.begin(); it != timesAvailable.end(); it++) {
         if (*it == toChoose) {
             timesAllocated.push_back(*it);
@@ -92,10 +86,12 @@ void WorkerNode::allocateBlock(TimeSlotNode *toChoose, bool &problem) {
         }
     }
     cerr << "We should never reach here allocate" << endl;  // TODO: Remove
-    problem = true;
 }
 
-void WorkerNode::deallocateBlock(TimeSlotNode *toRemove, bool &problem) {
+void WorkerNode::deallocateBlock(TimeSlotNode *toRemove) {
+    updateShiftsRemaining(1); // removing a block
+    toRemove->setUsed(false);
+
     for (auto it = timesAllocated.begin(); it != timesAllocated.end(); it++) {
         if (*it == toRemove) {
             timesAllocated.erase(it);
@@ -103,7 +99,6 @@ void WorkerNode::deallocateBlock(TimeSlotNode *toRemove, bool &problem) {
         }
     }
     cerr << "We should never reach here deallocate" << endl;  // TODO: Remove
-    problem = true;
 }
 
 void WorkerNode::printBasic(ostream &output) {

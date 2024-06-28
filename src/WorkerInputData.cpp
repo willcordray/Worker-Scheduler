@@ -42,8 +42,8 @@ void WorkerInputData::buildWorkersAvailable() {
     workersAvailable = vector<vector<vector<TimeSlotNode *>>>(NUM_DAYS, vector<vector<TimeSlotNode *>>(MAX_SHIFTS));
     for (size_t i = 0; i < workerList.size(); i++) {  // loop all workers
         // loop all Shifts
-        for (size_t j = 0; j < workerList[i]->getAvailability()->size(); j++) {
-            TimeSlotNode *newShift = (*workerList[i]->getAvailability())[j];
+        for (size_t j = 0; j < workerList[i]->getAvailability().size(); j++) {
+            TimeSlotNode *newShift = workerList[i]->getAvailability()[j];
             int day = newShift->getDay();
             int shift = newShift->getShift();
 
@@ -63,7 +63,7 @@ void WorkerInputData::normalizePriority() {
 
     // normalize all priorities
     for (int i = 0; i < n; i++) {
-        const vector<TimeSlotNode *> timeslots = *workerList[i]->getAvailability();
+        const vector<TimeSlotNode *> timeslots = workerList[i]->getAvailability();
         for (auto slot = timeslots.begin(); slot != timeslots.end(); slot++) {
             double newPriority = (*slot)->getTruePriority() - minPriority;
             if (maxPriority - minPriority != 0) {  // prevent div 0 errors
@@ -90,7 +90,7 @@ pair<double, double> WorkerInputData::findMinMaxPriority() {
     double maxPriority;
     bool firstTime = true;
     for (int i = 0; i < n; i++) {
-        vector<TimeSlotNode *> timeslots = *workerList[i]->getAvailability();
+        vector<TimeSlotNode *> timeslots = workerList[i]->getAvailability();
         for (auto slot = timeslots.begin(); slot != timeslots.end(); slot++) {
             if (firstTime or (*slot)->getTruePriority() < minPriority) {
                 minPriority = (*slot)->getTruePriority();
@@ -172,7 +172,7 @@ void WorkerInputData::readShifts(ifstream &infile, string filename, WorkerNode *
             cerr << "File reading fail in " << filename 
                  << ". Most likely couldn't read priority" << endl;
         } else { // no problems, so add the shift
-            currWorker->addShift(currWorker, day, shift, priority);
+            currWorker->addShift(day, shift, priority);
         }
     }
 }

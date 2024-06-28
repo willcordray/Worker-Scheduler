@@ -16,8 +16,8 @@ void Scheduler::addTinyPriorityChange(unsigned int randSeed) {
     int n = inputData.getNumWorkers();
 
     for (int i = 0; i < n; i++) {
-        const vector<TimeSlotNode *> *timeslots = inputData.getWorker(i)->getAvailability();
-        for (auto slot = timeslots->begin(); slot != timeslots->end(); slot++) {
+        const vector<TimeSlotNode *> timeslots = inputData.getWorker(i)->getAvailability();
+        for (auto slot = timeslots.begin(); slot != timeslots.end(); slot++) {
             // tiny change adds some minor variance so that this can be rerun
             // with different random values, and get different (maybe better)
             // results
@@ -40,18 +40,11 @@ void Scheduler::calculate() {
 
 // takes a timeslot node and adds it to the final schedule
 void Scheduler::addAllocation(TimeSlotNode *toAssign) {
-    toAssign->getParent()->updateShiftsRemaining(-1);  // 1 fewer shifts
-    toAssign->setUsed(true);                           // node is now used
-
     int day = toAssign->getDay();
     int shift = toAssign->getShift();
     finalSchedule[day][shift].push_back(toAssign);
 
-    bool problem = false;
-    toAssign->getParent()->allocateBlock(toAssign, problem); /* this extra thing feels unnecessary. Maybe just compute the TA allocation on the fly when needed? */
-    if (problem) {
-        cerr << seed << endl;
-    }
+    toAssign->getParent()->allocateBlock(toAssign); /* this extra thing feels unnecessary. Maybe just compute the TA allocation on the fly when needed? */
 }
 
 // takes a timeslot node and removes it from the final schedule
@@ -67,15 +60,7 @@ void Scheduler::removeAllocation(TimeSlotNode *toRemove) {
         }
     }
 
-    toRemove->getParent()->updateShiftsRemaining(1);  // 1 more shifts
-    toRemove->setUsed(false);                         // node is now not used
-
-    bool problem = false; // TODO: remove these debugging hints
-    toRemove->getParent()->deallocateBlock(toRemove,
-                                            problem);  // remove from allocated
-    if (problem) {
-        cerr << seed << endl;
-    }
+    toRemove->getParent()->deallocateBlock(toRemove);  // remove from allocated
 }
 
 void Scheduler::initialAllocation() {
@@ -180,7 +165,7 @@ void Scheduler::graphBalance() {
             resetNoPath();
         } else {
             cerr << "didn't find a path" << endl;
-            currWorker->set_noPath(true);
+            currWorker->setNoPath(true);
         }
 
         if (not findMinMaxWorker(&min, &max)) {  // no more workers that are unmarked
@@ -202,7 +187,7 @@ bool Scheduler::findMinMaxWorker(WorkerNode **min, WorkerNode **max) {
     bool foundWorker = false;
     for (int i = 0; i < n; i++) {
         WorkerNode *currWorker = inputData.getWorker(i);
-        if (not currWorker->get_noPath()) {
+        if (not currWorker->getNoPath()) {
             if (currWorker->getRelativeBooking() < (*min)->getRelativeBooking()) {
                 *min = currWorker;
             }
@@ -220,7 +205,7 @@ bool Scheduler::findMinMaxWorker(WorkerNode **min, WorkerNode **max) {
 void Scheduler::resetNoPath() {
     int n = inputData.getNumWorkers();
     for (int i = 0; i < n; i++) {
-        inputData.getWorker(i)->set_noPath(false);
+        inputData.getWorker(i)->setNoPath(false);
     }
 }
 
@@ -248,7 +233,7 @@ bool Scheduler::searchWorker(WorkerNode *currWorker) {
 void Scheduler::resetSeen() {
     int n = inputData.getNumWorkers();
     for (int i = 0; i < n; i++) {
-        const vector<TimeSlotNode *> nodes = *inputData.getWorker(i)->getAvailability();
+        const vector<TimeSlotNode *> nodes = inputData.getWorker(i)->getAvailability();
         for (size_t j = 0; j < nodes.size(); j++) {
             nodes[j]->setSeen(false);
         }
@@ -258,7 +243,7 @@ void Scheduler::resetSeen() {
 void Scheduler::resetPrev() {
     int n = inputData.getNumWorkers();
     for (int i = 0; i < n; i++) {
-        vector<TimeSlotNode *> slots = *inputData.getWorker(i)->getAvailability();
+        vector<TimeSlotNode *> slots = inputData.getWorker(i)->getAvailability();
         for (size_t j = 0; j < slots.size(); j++) {
             slots[j]->setPrev(nullptr);
         }

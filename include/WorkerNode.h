@@ -21,14 +21,11 @@ public:
 
     void resetValues();
 
-    void set_seen(bool newValue);
-    bool get_seen();
+    void setNoPath(bool newValue);
+    bool getNoPath();
 
-    void set_noPath(bool newValue);
-    bool get_noPath();
-
-    const vector<TimeSlotNode *> *getAvailability() const;
-    const unordered_set<WorkerNode *> *getLikedCoworkers() const;
+    const vector<TimeSlotNode *> &getAvailability() const;
+    const unordered_set<WorkerNode *> &getLikedCoworkers() const;
     const vector<TimeSlotNode *> &getAllocations() const;
     const string getName() const;
     int getShiftsRemaining() const;
@@ -37,16 +34,19 @@ public:
 
     void updateShiftsRemaining(int updateFactor);
 
-    void addShift(WorkerNode *thisWorker, int day, int shift, double priority);
+    void addShift(int day, int shift, double priority);
     void addLikedCoworker(WorkerNode *newWorker);
 
-    void allocateBlock(TimeSlotNode *toChoose, bool &problem); // TODO: remove all "problem"
-    void deallocateBlock(TimeSlotNode *toRemove, bool &problem);
+    void allocateBlock(TimeSlotNode *toChoose); // TODO: remove all "problem"
+    void deallocateBlock(TimeSlotNode *toRemove);
 
     void printBasic(ostream &output);
     void printFull(ostream &output);
 
 private:
+    void restoreDefaults();
+
+
     string name;
 
     vector<TimeSlotNode *> timesAvailable;
@@ -57,7 +57,6 @@ private:
     int maxShifts;        // max number of shifts this worker can take
     int shiftsRemaining;  // number of shifts left to assign
     int relativeBooking;
-    bool seen;
     bool noPath;     // a path was not found
 };
 
