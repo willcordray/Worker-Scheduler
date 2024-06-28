@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Project: Worker Scheduler
 * README
-* Author: Will Cordray, William.E.Cordray@gmail.com
+* Author: Will Cordray
 *******************************************************************************/
 
 Program Purpose:
@@ -66,8 +66,3 @@ License:
 -------
     This project is licensed under the MIT License. 
     See the LICENSE file for details
-
-Contact:
--------
-    For any questions or suggestions, please contact Will Cordray at 
-    William.E.Cordray@gmail.com.
