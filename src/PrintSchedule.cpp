@@ -40,7 +40,7 @@ void PrintSchedule::printSchedule(
 
             for (int k = 0; k < NUM_DAYS; k++) {  // loop all shifts
                 if (j < workers[k][i].size()) {
-                    printEven(output, workers[k][i][j]->get_parent()->getName(),
+                    printEven(output, workers[k][i][j]->getParent()->getName(),
                               maxSize[k + 1]);
                 } else {
                     printEven(output, "", maxSize[k + 1]);
@@ -63,7 +63,7 @@ void PrintSchedule::determineMaxSize(
         maxSize[i + 1] = dayNames[i].size();
         for (int j = 0; j < MAX_SHIFTS; j++) {
             for (size_t k = 0; k < workers[i][j].size(); k++) {
-                int newSize = workers[i][j][k]->get_parent()->getName().size();
+                int newSize = workers[i][j][k]->getParent()->getName().size();
                 if (newSize > maxSize[i + 1]) {
                     maxSize[i + 1] = newSize;
                 }

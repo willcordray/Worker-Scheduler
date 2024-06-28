@@ -44,8 +44,8 @@ void WorkerInputData::buildWorkersAvailable() {
         // loop all Shifts
         for (size_t j = 0; j < workerList[i]->getAvailability()->size(); j++) {
             TimeSlotNode *newShift = (*workerList[i]->getAvailability())[j];
-            int day = newShift->get_day();
-            int shift = newShift->get_shift();
+            int day = newShift->getDay();
+            int shift = newShift->getShift();
 
             workersAvailable[day][shift].push_back(newShift);
         }
@@ -65,7 +65,7 @@ void WorkerInputData::normalizePriority() {
     for (int i = 0; i < n; i++) {
         const vector<TimeSlotNode *> timeslots = *workerList[i]->getAvailability();
         for (auto slot = timeslots.begin(); slot != timeslots.end(); slot++) {
-            double newPriority = (*slot)->get_true_priority() - minPriority;
+            double newPriority = (*slot)->getTruePriority() - minPriority;
             if (maxPriority - minPriority != 0) {  // prevent div 0 errors
                 newPriority /= (maxPriority - minPriority);
             } else {  // all values same, normalize to 1
@@ -73,7 +73,7 @@ void WorkerInputData::normalizePriority() {
             }
 
 
-            (*slot)->set_true_priority(newPriority);
+            (*slot)->setTruePriority(newPriority);
         }
     }
 }
@@ -92,11 +92,11 @@ pair<double, double> WorkerInputData::findMinMaxPriority() {
     for (int i = 0; i < n; i++) {
         vector<TimeSlotNode *> timeslots = *workerList[i]->getAvailability();
         for (auto slot = timeslots.begin(); slot != timeslots.end(); slot++) {
-            if (firstTime or (*slot)->get_true_priority() < minPriority) {
-                minPriority = (*slot)->get_true_priority();
+            if (firstTime or (*slot)->getTruePriority() < minPriority) {
+                minPriority = (*slot)->getTruePriority();
             }
-            if (firstTime or (*slot)->get_true_priority() > maxPriority) {
-                maxPriority = (*slot)->get_true_priority();
+            if (firstTime or (*slot)->getTruePriority() > maxPriority) {
+                maxPriority = (*slot)->getTruePriority();
             }
 
             firstTime = false;
@@ -273,7 +273,7 @@ void WorkerInputData::validateNoRepeatBlocks() {
             unordered_set<string> namesInSlot;
             for (auto k = workersAvailable[i][j].begin();
                     k != workersAvailable[i][j].end(); k++) {
-                string name = (*k)->get_parent()->getName();
+                string name = (*k)->getParent()->getName();
                 if (namesInSlot.find(name) != namesInSlot.end()) { // repeat
                     string errorMessage = "Worker " +
                                           name + " has duplicate block(s) in " +

@@ -17,26 +17,26 @@ class TimeSlotNode {
 public:
     TimeSlotNode(WorkerNode *newParent, int newDay, int newShift, double newPriority);
 
-    void resetValues();
+    void restoreDefaults();
 
     bool operator==(const TimeSlotNode& other) const;
     bool operator!=(const TimeSlotNode& other) const;
 
-    WorkerNode *get_parent() const;
+    WorkerNode *getParent() const;
 
-    double get_priority(const vector<vector<vector<TimeSlotNode *>>> &workers, bool useTruePriority) const;
+    double getPriority(const vector<vector<vector<TimeSlotNode *>>> &workers, bool useTruePriority) const;
 
-    double get_true_priority() const; // todo: turn these to camel case
-    int get_day() const;
-    int get_shift() const;
-    bool get_used() const;
+    double getTruePriority() const; // todo: turn these to camel case
+    int getDay() const;
+    int getShift() const;
+    bool getUsed() const;
     bool getSeen() const;
     TimeSlotNode *getPrev() const;
 
-    void set_true_priority(double newPriority);
-    void set_priority(double newPriority);
+    void setTruePriority(double newPriority);
+    void setPriority(double newPriority);
     void setSeen(bool newValue);
-    void set_used(bool newValue);
+    void setUsed(bool newValue);
     void setPrev(TimeSlotNode *newPrev);
 
 

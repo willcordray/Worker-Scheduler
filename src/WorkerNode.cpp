@@ -18,7 +18,7 @@ void WorkerNode::resetValues() {
     timesAllocated.clear();
     // reset the values of the time slot nodes;
     for (auto it = timesAvailable.begin(); it != timesAvailable.end(); it++) {
-        (*it)->resetValues();
+        (*it)->restoreDefaults();
     }
 }
 
@@ -42,7 +42,7 @@ const vector<TimeSlotNode *> *WorkerNode::getAvailability() const {
     return &timesAvailable;
 }
 
-const vector<WorkerNode *> *WorkerNode::getLikedCoworkers() const {
+const unordered_set<WorkerNode *> *WorkerNode::getLikedCoworkers() const {
     return &likedCoworkers;
 }
 
@@ -81,7 +81,7 @@ void WorkerNode::addShift(WorkerNode *thisWorker, int day, int shift, double pri
 }
 
 void WorkerNode::addLikedCoworker(WorkerNode *newWorker) {
-    likedCoworkers.push_back(newWorker);
+    likedCoworkers.insert(newWorker);
 }
 
 void WorkerNode::allocateBlock(TimeSlotNode *toChoose, bool &problem) {

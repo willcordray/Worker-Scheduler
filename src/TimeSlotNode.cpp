@@ -7,12 +7,10 @@ TimeSlotNode::TimeSlotNode(WorkerNode *newParent, int newDay, int newShift,
     day = newDay;
     shift = newShift;
     truePriority = newPriority;
-    used = false;
-    seen = false;
+    restoreDefaults();
 }
 
-void TimeSlotNode::resetValues() {
-    priority = truePriority;
+void TimeSlotNode::restoreDefaults() {
     used = false;
     seen = false;
 }
@@ -26,13 +24,17 @@ bool TimeSlotNode::operator!=(const TimeSlotNode &other) const {
     return not (*this == other);
 }
 
-double TimeSlotNode::get_priority(
+double TimeSlotNode::getPriority(
     const vector<vector<vector<TimeSlotNode *>>> &workers,
     bool useTruePriority) const {
+    
     return (useTruePriority ? truePriority : priority) - calcPenalty() + calcBonus(workers);
 }
 
-// Note: penalty applies exponentially compared to how many shifts they are on in a row.
+/**************************** Penalty Calculation *****************************/
+
+// Note: penalty applies exponentially compared to how many shifts they are on 
+// in a row.
 double TimeSlotNode::calcPenalty() const {
     double penalty = 0;
     int numDoubleDay = 0;
@@ -40,10 +42,10 @@ double TimeSlotNode::calcPenalty() const {
     for (auto allocated = parent->getAllocations().begin();
          allocated != parent->getAllocations().end(); allocated++) {
         // double day
-        if ((*allocated)->get_day() == day and (*this != **allocated)) {
+        if ((*allocated)->getDay() == day and (*this != **allocated)) {
             // double shift
-            if ((*allocated)->get_shift() == shift - 1 or
-                (*allocated)->get_shift() == shift + 1) {
+            if ((*allocated)->getShift() == shift - 1 or
+                (*allocated)->getShift() == shift + 1) {
                 numDoubleShift++;
             } else {
                 numDoubleDay++;
@@ -53,8 +55,6 @@ double TimeSlotNode::calcPenalty() const {
 
     penalty += exponeniatePenalty(numDoubleDay, 2, doubleDayPenalty);
     penalty += exponeniatePenalty(numDoubleShift, 2, doubleShiftPenalty);
-                // penalty += doubleShiftPenalty;
-                // penalty += doubleDayPenalty;
     return penalty;
 }
 
@@ -71,10 +71,10 @@ double TimeSlotNode::exponeniatePenalty(int times, double factor, double penalty
         return 0;
     }
 
-    double finalFactor = 1;
-    for (int i = 0; i < times - 1; i++) {
-        finalFactor *= factor;
-    }
+    // TODO: is this the best punishment function?
+    // times - 1 because this is a scaler for if there are multiple problems
+    double finalFactor = pow(factor, times - 1);
+    
     return (finalFactor * penalty) / (times + 1);
 }
 
@@ -83,44 +83,39 @@ double TimeSlotNode::calcBonus(
     double bonus = 0;
 
     // check for the coworkerPreference bonus:
-    //     Note: Bonus applies linearly to how many people they are one shift
-    //     with who they like
+    //     Note: Bonus applies linearly to how many people they are on shift
+    //     with that they like
 
-    const vector<TimeSlotNode *> *workersToCheck = &(workers[day][shift]);
-    const vector<WorkerNode *> *likedCoworkers = parent->getLikedCoworkers();
-
-    // a hash table implementation might be faster at higher values of n, but 
-    // n is so small that I don't think the tradeoff is worth it. I might be 
-    // wrong though.
-    for (auto toCheck = workersToCheck->begin(); toCheck != workersToCheck->end();
-         toCheck++) {
-        for (auto toMatch = likedCoworkers->begin(); toMatch != likedCoworkers->end(); toMatch++) {
-            if ((*toCheck)->get_parent()->getName() == (*toMatch)->getName()) { // found liked
-                bonus += coworkerPreferenceBonus;
-            }
+    unordered_set<WorkerNode *> likes = *parent->getLikedCoworkers();
+    for (auto toMatch = workers[day][shift].begin(); 
+         toMatch != workers[day][shift].end(); toMatch++) {
+        if (likes.find((*toMatch)->getParent()) != likes.end()) {
+            bonus += coworkerPreferenceBonus;
         }
     }
 
     return bonus;
 }
 
-double TimeSlotNode::get_true_priority() const {
+/***************************** Getters and Setters ****************************/
+
+double TimeSlotNode::getTruePriority() const {
     return truePriority;
 }
 
-int TimeSlotNode::get_day() const {
+int TimeSlotNode::getDay() const {
     return day;
 }
 
-int TimeSlotNode::get_shift() const {
+int TimeSlotNode::getShift() const {
     return shift;
 }
 
-WorkerNode *TimeSlotNode::get_parent() const {
+WorkerNode *TimeSlotNode::getParent() const {
     return parent;
 }
 
-bool TimeSlotNode::get_used() const {
+bool TimeSlotNode::getUsed() const {
     return used;
 }
 
@@ -131,11 +126,11 @@ TimeSlotNode *TimeSlotNode::getPrev() const {
     return prev;
 }
 
-void TimeSlotNode::set_true_priority(double newPriority) {
+void TimeSlotNode::setTruePriority(double newPriority) {
     truePriority = newPriority;
 }
 
-void TimeSlotNode::set_priority(double newPriority) {
+void TimeSlotNode::setPriority(double newPriority) {
     priority = newPriority;
 }
 
@@ -143,13 +138,15 @@ void TimeSlotNode::setSeen(bool newValue) {
     seen = newValue;
 }
 
-void TimeSlotNode::set_used(bool newValue) {
+void TimeSlotNode::setUsed(bool newValue) {
     used = newValue;
 }
 
 void TimeSlotNode::setPrev(TimeSlotNode *newPrev) {
     prev = newPrev;
 }
+
+/*********************************** Printing *********************************/
 
 void TimeSlotNode::printTime(ostream &output) const {
     output << dayNames[day] << " : " << shiftNames[shift];

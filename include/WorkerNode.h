@@ -6,6 +6,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <unordered_set>
 
 #include "ScheduleData.h"
 #include "TimeSlotNode.h"
@@ -27,7 +28,7 @@ public:
     bool get_noPath();
 
     const vector<TimeSlotNode *> *getAvailability() const;
-    const vector<WorkerNode *> *getLikedCoworkers() const;
+    const unordered_set<WorkerNode *> *getLikedCoworkers() const;
     const vector<TimeSlotNode *> &getAllocations() const;
     const string getName() const;
     int getShiftsRemaining() const;
@@ -51,7 +52,7 @@ private:
     vector<TimeSlotNode *> timesAvailable;
     vector<TimeSlotNode *> timesAllocated;
 
-    vector<WorkerNode *> likedCoworkers;
+    unordered_set<WorkerNode *> likedCoworkers;
 
     int maxShifts;        // max number of shifts this worker can take
     int shiftsRemaining;  // number of shifts left to assign
