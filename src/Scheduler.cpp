@@ -4,53 +4,27 @@ Scheduler::Scheduler(WorkerInputData data, unsigned int newSeed) : inputData(dat
     finalSchedule = vector<vector<vector<TimeSlotNode *>>>(NUM_DAYS, vector<vector<TimeSlotNode *>>(MAX_SHIFTS));
     seed = newSeed;
     calculated = false;
-    normalizePriority(newSeed);
+    addTinyPriorityChange(newSeed);
 }
 
 /* TODO: could this be done in pre-processing? Only do the tiny change here. 
    Also, we should scale the tiny change based off of the range of the initial number to remove the arbitrary restriction */
 
 // normalizes priorities based on (X - min) / (max - min) = newPriority
-void Scheduler::normalizePriority(unsigned int randSeed) {
+void Scheduler::addTinyPriorityChange(unsigned int randSeed) {
     srand(randSeed);
     int n = inputData.getNumWorkers();
 
-    // get min and max priorities
-    double minPriority;
-    double maxPriority;
-    bool firstTime = true;
-    for (int i = 0; i < n; i++) {
-        const vector<TimeSlotNode *> *timeslots = inputData.getWorker(i)->getAvailability();
-        for (auto slot = timeslots->begin(); slot != timeslots->end(); slot++) {
-            if (firstTime or (*slot)->get_true_priority() < minPriority) {
-                minPriority = (*slot)->get_true_priority();
-            }
-            if (firstTime or (*slot)->get_true_priority() > maxPriority) {
-                maxPriority = (*slot)->get_true_priority();
-                firstTime = false;
-            }
-        }
-    }
-
-    // normalize all priorities
     for (int i = 0; i < n; i++) {
         const vector<TimeSlotNode *> *timeslots = inputData.getWorker(i)->getAvailability();
         for (auto slot = timeslots->begin(); slot != timeslots->end(); slot++) {
             // tiny change adds some minor variance so that this can be rerun
             // with different random values, and get different (maybe better)
             // results
-            double tinyChange = ((double)rand() / RAND_MAX) / 1'000; // TODO: this should be a constant, and higher
-            double newPriority = (*slot)->get_true_priority() - minPriority;
+            double tinyChange = ((double)rand() / RAND_MAX) / tinyChangeDivisor;
+            double wigglePriority = (*slot)->get_true_priority() + tinyChange;
 
-            if (maxPriority - minPriority != 0) {  // prevent div 0 errors
-                newPriority /= (maxPriority - minPriority);
-            } else {  // all values same, normalize to 1
-                newPriority = 1;
-            }
-            (*slot)->set_true_priority(newPriority);
-
-            newPriority += tinyChange;
-            (*slot)->set_priority(newPriority);
+            (*slot)->set_priority(wigglePriority);
         }
     }
 }

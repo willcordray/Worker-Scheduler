@@ -33,6 +33,10 @@ private:
     vector<WorkerNode *> workerList;
     vector<vector<vector<TimeSlotNode *>>> workersAvailable; // [NUM_DAYS][MAX_SHIFTS]
 
+    void normalizePriority();
+    pair<double, double> findMinMaxPriority();
+
+    void buildWorkersAvailable();
 
 
     void readFiles(string &inputDirectory);
@@ -47,7 +51,6 @@ private:
     template <typename streamtype>
     void openOrRuntimeError(streamtype &stream, std::string fileName);
 
-    void buildWorkersAvailable();
 
     void validate(ostream &output);
     void validateNoRepeatWorkers();

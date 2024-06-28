@@ -52,7 +52,6 @@ private:
 
     WorkerNode *parent; // parent worker for this timeslot node
 
-    double originalPriority;
     double truePriority; // change the name of this to normalizedPriority?
     double priority;
 

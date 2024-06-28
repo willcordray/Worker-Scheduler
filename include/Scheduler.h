@@ -50,7 +50,7 @@ private:
     vector<vector<vector<TimeSlotNode *>>> finalSchedule; // [NUM_DAYS][MAX_SHIFTS]
 
 
-    void normalizePriority(unsigned int randSeed);
+    void addTinyPriorityChange(unsigned int randSeed);
 
     void validateSolution();
 
@@ -86,9 +86,9 @@ private:
     static bool orderWorkers(TimeSlotNode *t1, TimeSlotNode *t2);
 
 
-
+    const double tinyChangeDivisor = 1'000'000;
     bool calculated;    // whether schedule has been calculated
-    unsigned int seed;  // seed of the program
+    unsigned int seed;  // seed of this run
     int numPaths = 0;
 };
 

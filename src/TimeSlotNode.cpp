@@ -6,15 +6,13 @@ TimeSlotNode::TimeSlotNode(WorkerNode *newParent, int newDay, int newShift,
 
     day = newDay;
     shift = newShift;
-    originalPriority = newPriority; // TODO: pull these out into function?
     truePriority = newPriority;
     used = false;
     seen = false;
 }
 
 void TimeSlotNode::resetValues() {
-    truePriority = originalPriority;
-    priority = originalPriority;
+    priority = truePriority;
     used = false;
     seen = false;
 }

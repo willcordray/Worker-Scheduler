@@ -17,6 +17,7 @@ WorkerInputData::WorkerInputData(string inputDirectory) {
     readFiles(inputDirectory);
 
     buildWorkersAvailable();
+    normalizePriority();
 
     validate(cerr);
 }
@@ -50,6 +51,61 @@ void WorkerInputData::buildWorkersAvailable() {
         }
     }
 }
+
+
+// normalizes priorities based on (X - min) / (max - min) = newPriority
+void WorkerInputData::normalizePriority() {
+    int n = workerList.size();
+
+    pair<double, double> minAndMax = findMinMaxPriority();
+    double minPriority = minAndMax.first;
+    double maxPriority = minAndMax.second;
+
+    // normalize all priorities
+    for (int i = 0; i < n; i++) {
+        const vector<TimeSlotNode *> timeslots = *workerList[i]->getAvailability();
+        for (auto slot = timeslots.begin(); slot != timeslots.end(); slot++) {
+            double newPriority = (*slot)->get_true_priority() - minPriority;
+            if (maxPriority - minPriority != 0) {  // prevent div 0 errors
+                newPriority /= (maxPriority - minPriority);
+            } else {  // all values same, normalize to 1
+                newPriority = 1;
+            }
+
+
+            (*slot)->set_true_priority(newPriority);
+        }
+    }
+}
+
+// first is minimum priority of any worker, second is maximum
+pair<double, double> WorkerInputData::findMinMaxPriority() {
+    int n = workerList.size();
+    if (n == 0) {
+        return {0, 0};
+    }
+    
+    // get min and max priorities
+    double minPriority;
+    double maxPriority;
+    bool firstTime = true;
+    for (int i = 0; i < n; i++) {
+        vector<TimeSlotNode *> timeslots = *workerList[i]->getAvailability();
+        for (auto slot = timeslots.begin(); slot != timeslots.end(); slot++) {
+            if (firstTime or (*slot)->get_true_priority() < minPriority) {
+                minPriority = (*slot)->get_true_priority();
+            }
+            if (firstTime or (*slot)->get_true_priority() > maxPriority) {
+                maxPriority = (*slot)->get_true_priority();
+            }
+
+            firstTime = false;
+        }
+    }
+    return {minPriority, maxPriority};
+}
+
+
 
 /******************************** File Reading ********************************/
 
