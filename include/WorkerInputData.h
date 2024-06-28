@@ -45,7 +45,7 @@ private:
     int dayStringToInt(string dayName);
     int shiftStringToInt(string shiftName);
     template <typename streamtype>
-    void open_or_die(streamtype &stream, std::string fileName);
+    void openOrRuntimeError(streamtype &stream, std::string fileName);
 
     void buildWorkersAvailable();
 
