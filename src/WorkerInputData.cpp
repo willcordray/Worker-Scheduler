@@ -24,7 +24,7 @@ WorkerInputData::WorkerInputData(string inputDirectory) {
 
 WorkerInputData::~WorkerInputData() {
     for (size_t i = 0; i < workerList.size(); i++) {
-        delete workerList[i];
+        delete workerList[i]; // TODO: set these pointer values to NULL after free (same for other pointers as well)
     }
 }
 

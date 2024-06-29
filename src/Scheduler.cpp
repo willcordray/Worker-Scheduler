@@ -260,12 +260,13 @@ pair<double, TimeSlotNode *> Scheduler::findPath(TimeSlotNode *overbooked) {
     paths.push({-overbooked->getPriority(finalSchedule, false), overbooked});
     overbooked->setSeen(true);
 
+    vector<TimeSlotNode *> neighbors;
     pair<double, TimeSlotNode *> bestPath = {0, nullptr};
     while(!paths.empty()) {
         pair<double, TimeSlotNode *> currPath = paths.top();
         paths.pop();
 
-        vector<TimeSlotNode *> neighbors = findNeighbors(currPath.second);
+        findNeighbors(neighbors, currPath.second);
 
         // shift to add in place of current
         for (size_t i = 0; i < neighbors.size(); i++) {
@@ -307,20 +308,18 @@ pair<double, TimeSlotNode *> Scheduler::findPath(TimeSlotNode *overbooked) {
 }
 
 // rename to find replacements?
-vector<TimeSlotNode *> Scheduler::findNeighbors(TimeSlotNode *initial) {
+void Scheduler::findNeighbors(vector<TimeSlotNode *> &neighbors, TimeSlotNode *initial) {
+    neighbors.clear();
+
     int day = initial->getDay(), shift = initial->getShift();
-    vector<TimeSlotNode *> potentialNeighbors = inputData.getWorkersAvailable(day, shift);
+    vector<TimeSlotNode *> &potentialNeighbors = inputData.getWorkersAvailable(day, shift);
 
-
-    vector<TimeSlotNode *> neighbors;
     for (size_t i = 0; i < potentialNeighbors.size(); i++) {
         TimeSlotNode *currNode = potentialNeighbors[i];
         if (!currNode->getUsed() && currNode != initial) {
             neighbors.push_back(currNode);
         }
     }
-
-    return neighbors;
 }
 // make sure the one we're adding is not allocated (neighbors), and the one we're removing is allocated (allocations)
 

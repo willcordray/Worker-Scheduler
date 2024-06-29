@@ -68,7 +68,7 @@ private:
 
     bool searchWorker(WorkerNode *currWorker);
     pair<double, TimeSlotNode *> findPath(TimeSlotNode *overbooked);
-    vector<TimeSlotNode *> findNeighbors(TimeSlotNode *initial);
+    void findNeighbors(vector<TimeSlotNode *> &neighbors, TimeSlotNode *initial);
     vector<TimeSlotNode *> buildPath(TimeSlotNode *end);
 
     void resetSeen();
