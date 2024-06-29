@@ -84,6 +84,7 @@ int main(int argc, char *argv[]) {
         }
 
         i++;
+        general.resetValues();
         // break;
     }
     auto t2 = chrono::high_resolution_clock::now();

@@ -18,7 +18,7 @@ class TimeSlotNode {
 public:
     TimeSlotNode(WorkerNode *newParent, int newDay, int newShift, double newPriority);
 
-    void restoreDefaults();
+    void resetRunValues();
 
     bool operator==(const TimeSlotNode& other) const;
     bool operator!=(const TimeSlotNode& other) const;

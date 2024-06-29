@@ -1,6 +1,6 @@
 #include "Scheduler.h"
 
-Scheduler::Scheduler(WorkerInputData data, unsigned int newSeed) : inputData(data) {
+Scheduler::Scheduler(WorkerInputData &data, unsigned int newSeed) : inputData(data) {
     finalSchedule = vector<vector<vector<TimeSlotNode *>>>(NUM_DAYS, vector<vector<TimeSlotNode *>>(MAX_SHIFTS));
     seed = newSeed;
     calculated = false;
@@ -107,10 +107,11 @@ void Scheduler::initialOneSlot(vector<TimeSlotNode *> *currQueue) {
                 topPriority.push_back(*it);
             }
         }
+        //  TODO: this isn't necessarily a problem, so why is it an error?
         if (topPriority.size() != 1) {
             cerr << "Size not 1: " << topPriority.size() << endl;
         }
-        int mostAvailability = INT_MIN;
+        int mostAvailability = INT_MIN; // TODO: change to a first time system?
         int indexMostAvailability = -1;
         for (size_t j = 0; j < topPriority.size(); j++) {
             if (topPriority[j]->getParent()->getShiftsRemaining() >

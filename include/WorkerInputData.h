@@ -20,6 +20,9 @@ public:
     WorkerInputData(string inputDirectory);
     WorkerInputData(const WorkerInputData &other);
 
+    void resetValues();
+    ~WorkerInputData();
+
     vector<vector<vector<TimeSlotNode *>>> &getWorkersAvailable();
     vector<TimeSlotNode *> &getWorkersAvailable(int day, int shift);
     int getWorkersPerShift(int day, int shift);

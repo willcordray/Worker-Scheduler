@@ -25,7 +25,7 @@ using namespace std;
 
 class Scheduler {
 public:
-    Scheduler(WorkerInputData data, unsigned int newSeed);
+    Scheduler(WorkerInputData &data, unsigned int newSeed);
 
     void validate(ostream &output);
 
@@ -44,7 +44,7 @@ public:
 
 private:
 
-    WorkerInputData inputData;
+    WorkerInputData &inputData;
     PrintSchedule schedulePrinter;
 
     vector<vector<vector<TimeSlotNode *>>> finalSchedule; // [NUM_DAYS][MAX_SHIFTS]

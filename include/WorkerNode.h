@@ -18,8 +18,9 @@ class TimeSlotNode;  // circular reference shenanigans
 class WorkerNode {
 public:
     WorkerNode(string newName, int newMaxShifts);
+    ~WorkerNode();
 
-    void resetValues();
+    void resetRunValues();
 
     void setNoPath(bool newValue);
     bool getNoPath();
@@ -32,7 +33,7 @@ public:
     int getMaxShifts() const;
     int getRelativeBooking() const;
 
-    void updateShiftsRemaining(int updateFactor);
+    void updateShiftsRemaining(int updateFactor); // TODO: this should not be public
 
     void addShift(int day, int shift, double priority);
     void addLikedCoworker(WorkerNode *newWorker);
@@ -44,7 +45,7 @@ public:
     void printFull(ostream &output);
 
 private:
-    void restoreDefaults();
+    void restoreInitialValues();
 
 
     string name;
@@ -56,7 +57,7 @@ private:
 
     int maxShifts;        // max number of shifts this worker can take
     int shiftsRemaining;  // number of shifts left to assign
-    int relativeBooking;
+    int relativeBooking; // TODO: remove this and compute it on the fly
     bool noPath;     // a path was not found
 };
 

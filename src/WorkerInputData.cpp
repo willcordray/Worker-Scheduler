@@ -22,16 +22,15 @@ WorkerInputData::WorkerInputData(string inputDirectory) {
     validate(cerr);
 }
 
-// copy constructor
-WorkerInputData::WorkerInputData(const WorkerInputData &other) {
-    workersPerShift = other.workersPerShift;
-    workerList = other.workerList;
-    workersAvailable = other.workersAvailable;
-
-    // reset all the run dependent values of workers and TimeSlotNodes to 
-    // starting values
+WorkerInputData::~WorkerInputData() {
     for (size_t i = 0; i < workerList.size(); i++) {
-        workerList[i]->resetValues();
+        delete workerList[i];
+    }
+}
+
+void WorkerInputData::resetValues() {
+    for (size_t i = 0; i < workerList.size(); i++) {
+        workerList[i]->resetRunValues();
     }
 }
 
@@ -132,6 +131,7 @@ void WorkerInputData::readFiles(string &inputDirectory) {
         likes.push_back(readLikes(infile));
         
         workerList.push_back(newWorker);
+        infile.close();
     }
 
     processLikes(likes); // add all the likes to worker nodes

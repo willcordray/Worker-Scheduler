@@ -1,23 +1,29 @@
 #include "WorkerNode.h"
 
 WorkerNode::WorkerNode(string newName, int newMaxShifts) {
-    restoreDefaults();
-
     name = newName;
     maxShifts = newMaxShifts;
+
+    resetRunValues();
 }
 
-void WorkerNode::resetValues() {
-    restoreDefaults();
+WorkerNode::~WorkerNode() {
+    for (size_t i = 0; i < timesAvailable.size(); i++) {
+        delete timesAvailable[i];
+    }
+}
+
+void WorkerNode::resetRunValues() {
+    restoreInitialValues();
 
     timesAllocated.clear();
     // reset the values of the time slot nodes;
     for (auto it = timesAvailable.begin(); it != timesAvailable.end(); it++) {
-        (*it)->restoreDefaults();
+        (*it)->resetRunValues();
     }
 }
 
-void WorkerNode::restoreDefaults() {
+void WorkerNode::restoreInitialValues() {
     shiftsRemaining = maxShifts;
     relativeBooking = -1 * maxShifts;
     noPath = false;

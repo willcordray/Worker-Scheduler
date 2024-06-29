@@ -2,7 +2,7 @@
 
 TimeSlotNode::TimeSlotNode(WorkerNode *newParent, int newDay, int newShift,
                            double newPriority) {
-    restoreDefaults();
+    resetRunValues();
 
     parent = newParent;
     day = newDay;
@@ -10,7 +10,7 @@ TimeSlotNode::TimeSlotNode(WorkerNode *newParent, int newDay, int newShift,
     truePriority = newPriority;
 }
 
-void TimeSlotNode::restoreDefaults() {
+void TimeSlotNode::resetRunValues() {
     used = false;
     seen = false;
 }
