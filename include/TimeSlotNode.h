@@ -5,6 +5,7 @@
 
 #include <iostream>
 #include <vector>
+#include <cmath>
 
 #include "ScheduleData.h"
 #include "WorkerNode.h"
