@@ -14,6 +14,7 @@ using namespace std;
 
 class WorkerNode; // circular reference shenanigans
 
+// TODO: make sure the order of this is correct according to the .c file
 class TimeSlotNode {
 public:
     TimeSlotNode(WorkerNode *newParent, int newDay, int newShift, double newPriority);
@@ -24,6 +25,9 @@ public:
     bool operator!=(const TimeSlotNode& other) const;
 
     WorkerNode *getParent() const;
+
+    void resetMemoizedPriority(const vector<vector<vector<TimeSlotNode *>>> &workers);
+    double getMemoizedPriority(bool useTruePriority) const;
 
     double getPriority(const vector<vector<vector<TimeSlotNode *>>> &workers, bool useTruePriority) const;
 
@@ -54,7 +58,8 @@ private:
     WorkerNode *parent; // parent worker for this timeslot node
 
     double truePriority; // change the name of this to normalizedPriority?
-    double priority;
+    double priority; // priority after the tiny shift
+    double memoizedPriority;
 
     int day;
     int shift;

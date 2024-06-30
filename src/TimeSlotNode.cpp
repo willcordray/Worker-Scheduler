@@ -14,6 +14,7 @@ void TimeSlotNode::resetRunValues() {
     used = false;
     seen = false;
     prev = nullptr;
+    memoizedPriority = 0;
 }
 
 bool TimeSlotNode::operator==(const TimeSlotNode &other) const {
@@ -25,11 +26,19 @@ bool TimeSlotNode::operator!=(const TimeSlotNode &other) const {
     return not (*this == other);
 }
 
+void TimeSlotNode::resetMemoizedPriority(const vector<vector<vector<TimeSlotNode *>>> &workers) {
+    memoizedPriority = calcBonus(workers) - calcPenalty();
+}
+
+double TimeSlotNode::getMemoizedPriority(bool useTruePriority) const {
+    return (useTruePriority ? truePriority : priority) + memoizedPriority;
+}
+
 double TimeSlotNode::getPriority(
     const vector<vector<vector<TimeSlotNode *>>> &workers,
     bool useTruePriority) const {
     
-    return (useTruePriority ? truePriority : priority) - calcPenalty() + calcBonus(workers);
+    return (useTruePriority ? truePriority : priority) + calcBonus(workers) - calcPenalty();
 }
 
 /**************************** Penalty Calculation *****************************/
@@ -40,13 +49,14 @@ double TimeSlotNode::calcPenalty() const {
     double penalty = 0;
     int numDoubleDay = 0;
     int numDoubleShift = 0;
-    for (auto allocated = parent->getAllocations().begin();
-         allocated != parent->getAllocations().end(); allocated++) {
+    const vector<TimeSlotNode *> &allocations = parent->getAllocations();
+    for (auto allocation = allocations.begin();
+         allocation != allocations.end(); allocation++) {
         // double day
-        if ((*allocated)->getDay() == day and (*this != **allocated)) {
+        if ((*allocation)->getDay() == day and (*this != **allocation)) {
             // double shift
-            if ((*allocated)->getShift() == shift - 1 or
-                (*allocated)->getShift() == shift + 1) {
+            if ((*allocation)->getShift() == shift - 1 or
+                (*allocation)->getShift() == shift + 1) {
                 numDoubleShift++;
             } else {
                 numDoubleDay++;
@@ -87,9 +97,9 @@ double TimeSlotNode::calcBonus(
     //     Note: Bonus applies linearly to how many people they are on shift
     //     with that they like
 
-    unordered_set<WorkerNode *> likes = parent->getLikedCoworkers();
-    for (auto toMatch = workers[day][shift].begin(); 
-         toMatch != workers[day][shift].end(); toMatch++) {
+    const vector<TimeSlotNode *> &timeslot = workers[day][shift];
+    const unordered_set<WorkerNode *> &likes = parent->getLikedCoworkers();
+    for (auto toMatch = timeslot.begin(); toMatch != timeslot.end(); toMatch++) {
         if (likes.find((*toMatch)->getParent()) != likes.end()) {
             bonus += coworkerPreferenceBonus;
         }

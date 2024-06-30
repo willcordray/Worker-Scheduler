@@ -81,6 +81,7 @@ private:
 
     void buildPath(vector<TimeSlotNode *> &path, TimeSlotNode *end);
     void makeChanges(vector<TimeSlotNode *> &path);
+    void resetAllMemoizedPriorities();
 
 
     /******************************* Validation *******************************/

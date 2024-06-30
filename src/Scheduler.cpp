@@ -143,6 +143,9 @@ TimeSlotNode *Scheduler::findMaxTimeSlotPriority(const vector<TimeSlotNode *> &c
 
 
 void Scheduler::graphBalance() {
+    // initialize the values of timeslot priority memoization
+    resetAllMemoizedPriorities();
+
     WorkerNode *min;
     WorkerNode *max;
     findMinMaxWorkerBooking(&min, &max);
@@ -237,7 +240,7 @@ pair<double, TimeSlotNode *> Scheduler::findPath(TimeSlotNode *overbooked) {
     resetSearchValues();
 
     priority_queue<pair<double, TimeSlotNode *>> paths;
-    paths.push({-overbooked->getPriority(finalSchedule, false), overbooked});
+    paths.push({-overbooked->getMemoizedPriority(false), overbooked});
     overbooked->setSeen(true);
 
     // double is the value of the current path, and the timeslotnode is the 
@@ -272,7 +275,7 @@ void Scheduler::findNodeToAdd(priority_queue<pair<double, TimeSlotNode *>> &path
 
             // if underbooked person, valid path
             if (validPath(start, neighbors[i])) {
-                double pathValue = currPath.first + neighbors[i]->getPriority(finalSchedule, false);
+                double pathValue = currPath.first + neighbors[i]->getMemoizedPriority(false);
                 if (bestPath.second == nullptr or pathValue > bestPath.first) {
                     bestPath = {pathValue, neighbors[i]};
                 }
@@ -293,7 +296,7 @@ void Scheduler::findNodeToDrop(priority_queue<pair<double, TimeSlotNode *>> &pat
         if (!allocations[j]->getSeen()) {
             allocations[j]->setPrev(neighbor); // maintain the path
             allocations[j]->setSeen(true);
-            double newValue = currPathValue + neighbor->getPriority(finalSchedule, false) - allocations[j]->getPriority(finalSchedule, false);
+            double newValue = currPathValue + neighbor->getMemoizedPriority(false) - allocations[j]->getMemoizedPriority(false);
             paths.push({newValue, allocations[j]});
         }
     }
@@ -329,6 +332,17 @@ void Scheduler::makeChanges(vector<TimeSlotNode *> &path) {
         }
 
         allocated = !allocated;
+    }
+    resetAllMemoizedPriorities();
+}
+
+void Scheduler::resetAllMemoizedPriorities() {
+    int n = inputData.getNumWorkers();
+    for (int i = 0; i < n; i++) {
+        const vector<TimeSlotNode *> &slots = inputData.getWorker(i)->getAvailability();
+        for (size_t j = 0; j < slots.size(); j++) {
+            slots[j]->resetMemoizedPriority(finalSchedule);
+        }
     }
 }
 
@@ -521,6 +535,7 @@ void Scheduler::printScheduleShifts(ostream &output) {
     schedulePrinter.printSchedule(output, inputData.getWorkersAvailable());
 }
 
+// TODO: move this to worker input data?
 // printing all basic worker info (name, max num shifts, total available shifts)
 void Scheduler::printWorkers(ostream &output) {
     int n = inputData.getNumWorkers();
