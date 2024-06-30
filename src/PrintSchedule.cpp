@@ -1,7 +1,7 @@
 #include "PrintSchedule.h"
 
 void PrintSchedule::printSchedule(
-    ostream &output, vector<vector<vector<TimeSlotNode *>>> &workers) {
+    ostream &output, const vector<vector<vector<TimeSlotNode *>>> &workers) {
     vector<int> maxSize;  // max size of a name/thing in each column
     determineMaxSize(maxSize, workers);
 
@@ -57,7 +57,7 @@ void PrintSchedule::printSchedule(
 
 // determines the max size of a string in a column for printing
 void PrintSchedule::determineMaxSize(
-    vector<int> &maxSize, vector<vector<vector<TimeSlotNode *>>> &workers) {
+    vector<int> &maxSize, const vector<vector<vector<TimeSlotNode *>>> &workers) {
     maxSize.resize(NUM_DAYS + 1);
     for (int i = 0; i < NUM_DAYS; i++) {
         maxSize[i + 1] = dayNames[i].size();

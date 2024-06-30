@@ -1,14 +1,12 @@
 #include "Scheduler.h"
 
+/********************************* Constructor ********************************/
+
 Scheduler::Scheduler(WorkerInputData &data, unsigned int newSeed) : inputData(data) {
-    finalSchedule = vector<vector<vector<TimeSlotNode *>>>(NUM_DAYS, vector<vector<TimeSlotNode *>>(MAX_SHIFTS));
     seed = newSeed;
     calculated = false;
     addTinyPriorityChange(newSeed);
 }
-
-/* TODO: could this be done in pre-processing? Only do the tiny change here. 
-   Also, we should scale the tiny change based off of the range of the initial number to remove the arbitrary restriction */
 
 // normalizes priorities based on (X - min) / (max - min) = newPriority
 void Scheduler::addTinyPriorityChange(unsigned int randSeed) {
@@ -16,19 +14,20 @@ void Scheduler::addTinyPriorityChange(unsigned int randSeed) {
     int n = inputData.getNumWorkers();
 
     for (int i = 0; i < n; i++) {
-        const vector<TimeSlotNode *> timeslots = inputData.getWorker(i)->getAvailability();
+        const vector<TimeSlotNode *> &timeslots = inputData.getWorker(i)->getAvailability();
         for (auto slot = timeslots.begin(); slot != timeslots.end(); slot++) {
             // tiny change adds some minor variance so that this can be rerun
             // with different random values, and get different (maybe better)
             // results
             double tinyChange = ((double)rand() / RAND_MAX) / tinyChangeDivisor;
-            double wigglePriority = (*slot)->getTruePriority() + tinyChange;
+            double wiggledPriority = (*slot)->getTruePriority() + tinyChange;
 
-            (*slot)->setPriority(wigglePriority);
+            (*slot)->setPriority(wiggledPriority);
         }
     }
 }
 
+/***************************** Schedule Population ****************************/
 
 void Scheduler::calculate() {
     calculated = true;
@@ -44,12 +43,11 @@ void Scheduler::addAllocation(TimeSlotNode *toAssign) {
     int shift = toAssign->getShift();
     finalSchedule[day][shift].push_back(toAssign);
 
-    toAssign->getParent()->allocateBlock(toAssign); /* this extra thing feels unnecessary. Maybe just compute the TA allocation on the fly when needed? */
+    toAssign->getParent()->allocateBlock(toAssign);
 }
 
 // takes a timeslot node and removes it from the final schedule
 void Scheduler::removeAllocation(TimeSlotNode *toRemove) {
-    // remove from final schedule
     int day = toRemove->getDay();
     int shift = toRemove->getShift();
     for (auto it = finalSchedule[day][shift].begin();
@@ -65,80 +63,73 @@ void Scheduler::removeAllocation(TimeSlotNode *toRemove) {
 
 void Scheduler::initialAllocation() {
     vector<pair<int, int>> shifts;
-    int numShifts = NUM_DAYS * MAX_SHIFTS;
     for (int i = 0; i < NUM_DAYS; i++) {  // loop all shifts
         for (int j = 0; j < MAX_SHIFTS; j++) {
             shifts.push_back({i, j});
         }
     }
+
+    // randomize the order of when shifts are allocated
     shuffle(shifts.begin(), shifts.end(), default_random_engine(rand()));
-    // get random shift, then make allocations. Done in random order to prevent
-    // tendency to overload some workers
-    // Note: random needs to be done as one number, not rand day and rand shift
-    //       because otherwise shifts on days with fewer shifts will be
-    //       overrepresented
+
+    int numShifts = NUM_DAYS * MAX_SHIFTS;
     for (int i = 0; i < numShifts; i++) {
         // convert combined to individual days and shifts
         int day = shifts[i].first;
         int shift = shifts[i].second;
-        vector<TimeSlotNode *> currShift = inputData.getWorkersAvailable(day, shift);
+        const vector<TimeSlotNode *> &currShift = inputData.getWorkersAvailable(day, shift);
         if (inputData.getWorkersPerShift(day, shift) > 0) {
-            initialOneSlot(&currShift);
+            initialOneSlot(currShift);
         }
     }
 }
 
 // initially allocate all of the TAs for one timeslot
-void Scheduler::initialOneSlot(vector<TimeSlotNode *> *currQueue) {
-    if (currQueue->size() == 0) {  // shift with no available TAs
+void Scheduler::initialOneSlot(const vector<TimeSlotNode *> &currQueue) {
+    if (currQueue.size() == 0) {  // shift with no available TAs
         return;
     }
 
-    int day = currQueue->front()->getDay();  // all same shift time
-    int shift = currQueue->front()->getShift();
-    for (int i = 0; i < inputData.getWorkersPerShift(day, shift); i++) {  // assign [num] TAs
+    int day = currQueue.front()->getDay();  // all same shift time
+    int shift = currQueue.front()->getShift();
+    // assigning all of the workers for this shift
+    for (int i = 0; i < inputData.getWorkersPerShift(day, shift); i++) {
         TimeSlotNode *topTimeNode;
-        topTimeNode = findMaxTimeSlot(currQueue);
+        topTimeNode = findMaxTimeSlotPriority(currQueue);
         vector<TimeSlotNode *> topPriority;
         double highestPriority = topTimeNode->getPriority(finalSchedule, false);
-        for (auto it = currQueue->begin(); it != currQueue->end(); it++) {
-            if (not (*it)->getUsed() and
+        for (auto it = currQueue.begin(); it != currQueue.end(); it++) {
+            if (!(*it)->getUsed() and
                 (*it)->getPriority(finalSchedule, false) == highestPriority) {
                 topPriority.push_back(*it);
             }
         }
-        //  TODO: this isn't necessarily a problem, so why is it an error?
-        if (topPriority.size() != 1) {
-            cerr << "Size not 1: " << topPriority.size() << endl;
-        }
-        int mostAvailability = INT_MIN; // TODO: change to a first time system?
+        // among the shifts with highest priority, select the person who has 
+        // the lowest number of shifts
+        int mostAvailability = INT_MIN;
         int indexMostAvailability = -1;
         for (size_t j = 0; j < topPriority.size(); j++) {
-            if (topPriority[j]->getParent()->getShiftsRemaining() >
-                mostAvailability) {
-                mostAvailability =
-                    topPriority[j]->getParent()->getShiftsRemaining();
+            int currAvailability 
+                    = topPriority[j]->getParent()->getShiftsRemaining();
+            if (currAvailability > mostAvailability) {
+                mostAvailability = currAvailability;
                 indexMostAvailability = j;
             }
-        }
-        if (indexMostAvailability == -1) {
-            cerr << "indexMostAvailablility is -1" << endl;
         }
         addAllocation(topPriority[indexMostAvailability]);
     }
 }
 
-TimeSlotNode *Scheduler::findMaxTimeSlot(vector<TimeSlotNode *> *currQueue) {
+// finds the unused timeslotnode within the queue that has the highest priority
+TimeSlotNode *Scheduler::findMaxTimeSlotPriority(const vector<TimeSlotNode *> &currQueue) {
     TimeSlotNode *topTimeNode = nullptr;
-    bool foundTimeSlot = false;
     double highestPriority;
-    for (auto it = currQueue->begin(); it != currQueue->end(); it++) {
+    for (auto it = currQueue.begin(); it != currQueue.end(); it++) {
         if (not (*it)->getUsed() and
-            (not foundTimeSlot or
+            (topTimeNode == nullptr or
              (*it)->getPriority(finalSchedule, false) > highestPriority)) {
             topTimeNode = *it;
             highestPriority = (*it)->getPriority(finalSchedule, false);
-            foundTimeSlot = true;
         }
     }
 
@@ -150,52 +141,51 @@ TimeSlotNode *Scheduler::findMaxTimeSlot(vector<TimeSlotNode *> *currQueue) {
     return topTimeNode;
 }
 
+
 void Scheduler::graphBalance() {
     WorkerNode *min;
     WorkerNode *max;
-    findMinMaxWorker(&min, &max);
+    findMinMaxWorkerBooking(&min, &max);
 
     // loops until all workers are evenly allocated
     while (abs(max->getRelativeBooking() - min->getRelativeBooking()) > 1) {
         WorkerNode *currWorker = max;
 
-        bool madeChange = searchWorker(currWorker);
         // try to find path
+        bool madeChange = searchWorker(currWorker);
 
+        // if a path was found, the graph is changed and other nodes for 
+        // which a path didn't exist might exist now
         if (madeChange) {
             resetNoPath();
         } else {
-            cerr << "didn't find a path" << endl;
+            cerr << "didn't find a path" << endl; // todo: debugging
             currWorker->setNoPath(true);
         }
 
-        if (not findMinMaxWorker(&min, &max)) {  // no more workers that are unmarked
+        if (!findMinMaxWorkerBooking(&min, &max)) {  // no more workers that are unmarked
             cerr << "No more paths" << endl;
             return;
         }
     }
 }
 
-bool Scheduler::findMinMaxWorker(WorkerNode **min, WorkerNode **max) {
+// finds the workers with the highest and lowest booking
+bool Scheduler::findMinMaxWorkerBooking(WorkerNode **min, WorkerNode **max) {
     int n = inputData.getNumWorkers();
-    if (n > 0) {
-        *min = inputData.getWorker(0);
-        *max = inputData.getWorker(0);
-    } else {
-        return false;
-    }
 
     bool foundWorker = false;
     for (int i = 0; i < n; i++) {
         WorkerNode *currWorker = inputData.getWorker(i);
-        if (not currWorker->getNoPath()) {
-            if (currWorker->getRelativeBooking() < (*min)->getRelativeBooking()) {
+        // only include workers that can be searched
+        if (!currWorker->getNoPath()) {
+            int currBooking = currWorker->getRelativeBooking();
+            if (!foundWorker || currBooking < (*min)->getRelativeBooking()) {
                 *min = currWorker;
             }
-            if (currWorker->getRelativeBooking() > (*max)->getRelativeBooking()) {
+            if (!foundWorker || currBooking > (*max)->getRelativeBooking()) {
                 *max = currWorker;
             }
-
 
             foundWorker = true;
         }
@@ -203,24 +193,18 @@ bool Scheduler::findMinMaxWorker(WorkerNode **min, WorkerNode **max) {
     return foundWorker;
 }
 
-void Scheduler::resetNoPath() {
-    int n = inputData.getNumWorkers();
-    for (int i = 0; i < n; i++) {
-        inputData.getWorker(i)->setNoPath(false);
-    }
-}
 
-// takes a worker, and calls the recursive findPath to try to change their shifts
+// takes a worker, and calls findPath to graph search to remove an allocations
 bool Scheduler::searchWorker(WorkerNode *currWorker) {
-    double bestPathVal;  // always less
+    double bestPathVal;
     bool foundPath = false;
-    const vector<TimeSlotNode *> blocks = currWorker->getAllocations();
-    vector<TimeSlotNode *> bestPath;  // variable that will hold best path
+    const vector<TimeSlotNode *> &blocks = currWorker->getAllocations();
+    vector<TimeSlotNode *> bestPath;
     for (auto it = blocks.begin(); it != blocks.end(); it++) {
         pair<double, TimeSlotNode *> result = findPath(*it);
         if (result.second != nullptr and (!foundPath or result.first > bestPathVal)) {
             bestPathVal = result.first;
-            bestPath = buildPath(result.second);
+            buildPath(bestPath, result.second);
             foundPath = true;
         }
     }
@@ -231,125 +215,111 @@ bool Scheduler::searchWorker(WorkerNode *currWorker) {
     return foundPath;
 }
 
-void Scheduler::resetSeen() {
+void Scheduler::resetSearchValues() {
     int n = inputData.getNumWorkers();
     for (int i = 0; i < n; i++) {
-        const vector<TimeSlotNode *> nodes = inputData.getWorker(i)->getAvailability();
-        for (size_t j = 0; j < nodes.size(); j++) {
-            nodes[j]->setSeen(false);
-        }
-    }
-}
-
-void Scheduler::resetPrev() {
-    int n = inputData.getNumWorkers();
-    for (int i = 0; i < n; i++) {
-        vector<TimeSlotNode *> slots = inputData.getWorker(i)->getAvailability();
+        const vector<TimeSlotNode *> &slots = inputData.getWorker(i)->getAvailability();
         for (size_t j = 0; j < slots.size(); j++) {
+            slots[j]->setSeen(false);
             slots[j]->setPrev(nullptr);
         }
     }
 }
 
+void Scheduler::resetNoPath() {
+    int n = inputData.getNumWorkers();
+    for (int i = 0; i < n; i++) {
+        inputData.getWorker(i)->setNoPath(false);
+    }
+}
+
 pair<double, TimeSlotNode *> Scheduler::findPath(TimeSlotNode *overbooked) {
-    resetSeen();
-    resetPrev();
-    int prevBooking = overbooked->getParent()->getRelativeBooking(); // we are trying to find someone who is less overbooked
+    resetSearchValues();
 
     priority_queue<pair<double, TimeSlotNode *>> paths;
     paths.push({-overbooked->getPriority(finalSchedule, false), overbooked});
     overbooked->setSeen(true);
 
-    vector<TimeSlotNode *> neighbors;
+    // double is the value of the current path, and the timeslotnode is the 
+    // next node to drop from allocations
     pair<double, TimeSlotNode *> bestPath = {0, nullptr};
     while(!paths.empty()) {
         pair<double, TimeSlotNode *> currPath = paths.top();
         paths.pop();
 
-        findNeighbors(neighbors, currPath.second);
-
-        // shift to add in place of current
-        for (size_t i = 0; i < neighbors.size(); i++) {
-            if (neighbors[i]->getSeen()) { // already on a path
-                continue;
-            }
-
-            neighbors[i]->setPrev(currPath.second);
-            neighbors[i]->setSeen(true);
-
-            // underbooked person, so valid path
-            if (abs(neighbors[i]->getParent()->getRelativeBooking() - prevBooking) > 1) {
-                double pathValue = currPath.first + neighbors[i]->getPriority(finalSchedule, false);
-                if (bestPath.second == nullptr or pathValue > bestPath.first) {
-                    bestPath = {pathValue, neighbors[i]};
-                    numPaths++;
-                }
-            }
-
-            // shift to remove from the same person
-            const vector<TimeSlotNode *> allocations = neighbors[i]->getParent()->getAllocations();
-            for (size_t j = 0; j < allocations.size(); j++) {
-                if (!allocations[j]->getUsed() || allocations[j]->getSeen()) {
-                    continue;
-                }
-
-
-                if (allocations[j] != neighbors[i]) { // different shift than the one we're adding in
-                    allocations[j]->setPrev(neighbors[i]); // maintain the path
-                    allocations[j]->setSeen(true); // what happens if you don't do this? Shouldn't technically cause an infinite loop, and maybe even should be disabled. If it was disable, would necessitate a different way to track the path
-                    double newValue = currPath.first + neighbors[i]->getPriority(finalSchedule, false) - allocations[j]->getPriority(finalSchedule, false);
-                    paths.push({newValue, allocations[j]});
-                }
-            }
-        }
+        // trying to find a timeslotnode that can replace the current node
+        findNodeToAdd(paths, bestPath, currPath, overbooked);
     }
 
     return bestPath;
 }
 
-// rename to find replacements?
-void Scheduler::findNeighbors(vector<TimeSlotNode *> &neighbors, TimeSlotNode *initial) {
-    neighbors.clear();
+void Scheduler::findNodeToAdd(priority_queue<pair<double, TimeSlotNode *>> &paths, pair<double, TimeSlotNode *> &bestPath, pair<double, TimeSlotNode *> currPath, TimeSlotNode *start) {
+    TimeSlotNode *initial = currPath.second;
 
+    // populates neighbors of current node
+    // neighbors are unused shifts of people in the same timeslot that can 
+    // replace the current shift.
     int day = initial->getDay(), shift = initial->getShift();
-    vector<TimeSlotNode *> &potentialNeighbors = inputData.getWorkersAvailable(day, shift);
+    const vector<TimeSlotNode *> &neighbors = inputData.getWorkersAvailable(day, shift);
 
-    for (size_t i = 0; i < potentialNeighbors.size(); i++) {
-        TimeSlotNode *currNode = potentialNeighbors[i];
-        if (!currNode->getUsed() && currNode != initial) {
-            neighbors.push_back(currNode);
+    // don't want to change the booking of the neighbor, so find another 
+    //shift they are on and remove it.
+    for (size_t i = 0; i < neighbors.size(); i++) {
+        if (!neighbors[i]->getSeen() && !neighbors[i]->getUsed()) { // not already on a path
+            neighbors[i]->setPrev(currPath.second);
+            neighbors[i]->setSeen(true);
+
+            // if underbooked person, valid path
+            if (validPath(start, neighbors[i])) {
+                double pathValue = currPath.first + neighbors[i]->getPriority(finalSchedule, false);
+                if (bestPath.second == nullptr or pathValue > bestPath.first) {
+                    bestPath = {pathValue, neighbors[i]};
+                }
+            }
+
+            // shift to remove from the same person
+            findNodeToDrop(paths, neighbors[i], currPath.first);
         }
     }
 }
-// make sure the one we're adding is not allocated (neighbors), and the one we're removing is allocated (allocations)
 
-vector<TimeSlotNode *> Scheduler::buildPath(TimeSlotNode *end) {
-    vector<TimeSlotNode *> result;
-    result.push_back(end);
-    while (end != nullptr && end->getPrev() != nullptr) {
-        result.push_back(end->getPrev());
-        end = end->getPrev();
+void Scheduler::findNodeToDrop(priority_queue<pair<double, TimeSlotNode *>> &paths, TimeSlotNode *neighbor, double currPathValue) {
+    // the pool for allocations is different from the pool for neighbors, so 
+    // all nodes in allocations is a potential replacement
+    const vector<TimeSlotNode *> &allocations = neighbor->getParent()->getAllocations();
+    for (size_t j = 0; j < allocations.size(); j++) {
+        // shift has to already be used, and cannot be in another path
+        if (!allocations[j]->getSeen()) {
+            allocations[j]->setPrev(neighbor); // maintain the path
+            allocations[j]->setSeen(true);
+            double newValue = currPathValue + neighbor->getPriority(finalSchedule, false) - allocations[j]->getPriority(finalSchedule, false);
+            paths.push({newValue, allocations[j]});
+        }
     }
-    reverse(result.begin(), result.end());
-    return result;
 }
 
-/* [1] allison, brooke john
-   [2] allison, brooke steve
+bool Scheduler::validPath(TimeSlotNode *start, TimeSlotNode *end) {
+    return abs(start->getParent()->getRelativeBooking() - end->getParent()->getRelativeBooking()) > 1;
+}
 
-allison -> steve
-*/
 
-// double newPathValue = currPathValue +
-//                                   (*toAdd)->getPriority(finalSchedule, false) -
-//                                   (*toRemove)->getPriority(finalSchedule, false)
+void Scheduler::buildPath(vector<TimeSlotNode *> &path, TimeSlotNode *end) {
+    path.clear();
 
+    TimeSlotNode *curr = end;
+    while (curr != nullptr) {
+        path.push_back(curr);
+        curr = curr->getPrev();
+    }
+    reverse(path.begin(), path.end());
+}
 
 
 // path size must be even
 // path goes allocated -> not allocated -> allocated -> etc. (ends on not
 //      allocated)
-void Scheduler::makeChanges(vector<TimeSlotNode *> path) {
+void Scheduler::makeChanges(vector<TimeSlotNode *> &path) {
     bool allocated = true;
     for (auto it = path.begin(); it != path.end(); it++) {
         if (allocated) {
@@ -358,14 +328,21 @@ void Scheduler::makeChanges(vector<TimeSlotNode *> path) {
             addAllocation(*it);
         }
 
-        allocated = not allocated;
+        allocated = !allocated;
     }
 }
+
+/********************************* Validation *********************************/
 
 // validate that a solution works, i.e. all shifts have correct number of workers,
 // as well as under the hood problems like values of used and seen
 void Scheduler::validateSolution() {
-    unordered_set<TimeSlotNode *> inFinal;
+    validateWorkersOnShift();
+    validateNoDuplicateWorkers();
+    validateUsed();
+}
+
+void Scheduler::validateWorkersOnShift() {
     for (int i = 0; i < NUM_DAYS; i++) {
         for (int j = 0; j < MAX_SHIFTS; j++) {
             // correct number of workers on shift
@@ -375,60 +352,59 @@ void Scheduler::validateSolution() {
                                  dayNames[i] + " " + shiftNames[j];
                 throw runtime_error(message);
             }
+        }
+    }
+}
 
+void Scheduler::validateNoDuplicateWorkers() {
+    for (int i = 0; i < NUM_DAYS; i++) {
+        for (int j = 0; j < MAX_SHIFTS; j++) {
             // no duplicate workers on same shift
             unordered_set<string> namesSoFar;
             for (auto it = finalSchedule[i][j].begin();
                  it != finalSchedule[i][j].end(); it++) {
-                auto found = namesSoFar.find((*it)->getParent()->getName());
-                if (found != namesSoFar.end()) {  // found repeat
+                string name = (*it)->getParent()->getName();
+                if (namesSoFar.find(name) != namesSoFar.end()) {
                     string message =
-                        "Error: " + (*it)->getParent()->getName() + " is on " +
+                        "Error: " + name + " is on " +
                         dayNames[i] + " " + shiftNames[j] + " more than once";
                     throw runtime_error(message);
                 }
-                namesSoFar.insert((*it)->getParent()->getName());
-
-                inFinal.insert(*it);
+                namesSoFar.insert(name);
             }
-
         }
-    }
-
-    int n = inputData.getNumWorkers();
-    for (int i = 0; i < n; i++) {
-        WorkerNode *currWorker = inputData.getWorker(i);
-        const vector<TimeSlotNode *> allocations = currWorker->getAllocations();
-        for (auto slot = allocations.begin(); slot != allocations.end();
-             slot++) {
-            auto loc = inFinal.find((*slot));
-            if (loc == inFinal.end()) {  // not found
-                string message =
-                    "Error: " + (*slot)->getParent()->getName() + " " +
-                    dayNames[(*slot)->getDay()] + " " +
-                    shiftNames[(*slot)->getShift()] +
-                    " is marked as allocated, but is not in final scheduler";
-                throw runtime_error(message);
-            }
-            inFinal.erase((*slot));
-        }
-    }
-    // in final schedule, but not in worker allocated array
-    if (inFinal.size() != 0) {
-        string message = "Error: there are " + to_string(inFinal.size()) +
-                         " shift(s) in the final schedule that are not in workers "
-                         "allocated arrays";
-        throw runtime_error(message);
     }
 }
 
+void Scheduler::validateUsed() {
+    for (int i = 0; i < NUM_DAYS; i++) {
+        for (int j = 0; j < MAX_SHIFTS; j++) {
+            // no duplicate workers on same shift
+            unordered_set<string> namesSoFar;
+            for (auto it = finalSchedule[i][j].begin();
+                 it != finalSchedule[i][j].end(); it++) {
+                if (!(*it)->getUsed()) {
+                    string name = (*it)->getParent()->getName();
+                    string message = "Error: " + name + ", with block" 
+                                     + to_string((*it)->getDay()) + " : " 
+                                     + to_string((*it)->getShift()) 
+                                     + ", is on shift but is not marked as used";
+                    throw runtime_error(message);
+                }
+            }
+        }
+    }
+}
 
+/********************************* Statistics *********************************/
 
 double Scheduler::getAverage() {
-    if (not calculated) {
+    if (!calculated) {
         throw runtime_error("Tried to get average before calculating");
     }
 
+    // findAverage populates variables with the appropiate values, but 
+    // they are not used
     int mostIndex;
     int leastIndex;
     double leastPriority;
@@ -437,14 +413,22 @@ double Scheduler::getAverage() {
 }
 
 int Scheduler::getRange() {
+    if (!calculated) {
+        throw runtime_error("Tried to get range before calculating");
+    }
+
     WorkerNode *min;
     WorkerNode *max;
-    findMinMaxWorker(&min, &max);
+    findMinMaxWorkerBooking(&min, &max);
 
     return (max->getRelativeBooking() - min->getRelativeBooking());
 }
 
 double Scheduler::getLeastHappy() {
+    if (!calculated) {
+        throw runtime_error("Tried to get least happy before calculating");
+    }
+
     int mostIndex;
     int leastIndex;
     double leastPriority;
@@ -454,35 +438,46 @@ double Scheduler::getLeastHappy() {
     return leastPriority;
 }
 
-// TODO: remove these print functions?
-// printing all basic worker info (name, max num shifts, total available shifts)
-void Scheduler::printWorkers(ostream &output) {
+// TODO: split the finding of the least and most happy worker into seperate 
+// functions from finding the average?
+double Scheduler::findAverage(int &leastIndex, int &mostIndex,
+                              double &leastPriority, double &mostPriority) {
+    double totalPriority = 0;
+    int totalShifts = 0;
+    bool firstWorker = true;
     int n = inputData.getNumWorkers();
     for (int i = 0; i < n; i++) {
-        inputData.getWorker(i)->printBasic(output);
-    }
-}
-
-// printing all worker info, including all shifts worker focused printing
-void Scheduler::printWorkerShifts(ostream &output) {
-    int n = inputData.getNumWorkers();
-    for (int i = 0; i < n; i++) {
-        inputData.getWorker(i)->printFull(output);
-    }
-}
-
-
-// prints all workers and how many shifts they're scheduled for, as well
-// as how that number compares to their desired max shifts
-void Scheduler::printWorkerShiftNum(ostream &output) {
-    int n = inputData.getNumWorkers();
-    for (int i = 0; i < n; i++) {
+        double currPriority = 0;
         WorkerNode *currWorker = inputData.getWorker(i);
-        output << currWorker->getName() << " on "
-               << currWorker->getMaxShifts() - currWorker->getShiftsRemaining()
-               << " out of " << currWorker->getMaxShifts() << endl;
+        for (auto shift = currWorker->getAllocations().begin();
+             shift != currWorker->getAllocations().end(); shift++) {
+            currPriority += (*shift)->getPriority(finalSchedule, true);
+        }
+
+        int currShifts =  currWorker->getAllocations().size();
+        // for calculating overall averages
+        totalPriority += currPriority;
+        totalShifts += currShifts;
+
+        double currAverage = currPriority / (double) currShifts;
+
+        // finding the most and least happy worker
+        if (firstWorker or currAverage < leastPriority) {
+            leastPriority = currAverage;
+            leastIndex = i;
+        }
+        if (firstWorker or currAverage > mostPriority) {
+            mostPriority = currAverage;
+            mostIndex = i;
+        }
+
+        firstWorker = false;
     }
+    // return average happiness across all workers
+    return totalPriority / (double)totalShifts;
 }
+
+/********************************** Printing **********************************/
 
 // average priority
 // most satisfied worker
@@ -497,71 +492,60 @@ void Scheduler::printStats(ostream &output) {
         findAverage(leastIndex, mostIndex, leastPriority, mostPriority);
 
     output << "Average Happiness: " << averageHappiness << endl;
-    output << "Most Happy Worker: " << (inputData.getWorker(mostIndex))->getName() << " with "
+    output << "Most Happy Worker: " 
+           << (inputData.getWorker(mostIndex))->getName() << " with "
            << mostPriority << endl;
-    output << "Least Happy Worker: " << (inputData.getWorker(leastIndex))->getName() << " with "
+    output << "Least Happy Worker: " 
+           << (inputData.getWorker(leastIndex))->getName() << " with "
            << leastPriority << endl;
 }
 
-// TODO: make find average return the normalized value
-double Scheduler::findAverage(int &leastIndex,
-                              int &mostIndex,
-                              double &leastPriority, double &mostPriority) {
-    double totalPriority = 0;
-    int totalShifts = 0;
-    bool firstWorker = true;
-    int n = inputData.getNumWorkers();
-    for (int i = 0; i < n; i++) {
-        double currPriority = 0;
-        int currShifts = 0;
-        WorkerNode *currWorker = inputData.getWorker(i);
-        for (auto shift = currWorker->getAllocations().begin();
-             shift != currWorker->getAllocations().end(); shift++) {
-            // divide by 2 because also counts penalty for other shift on that
-            // day, etc.
-            currPriority += (*shift)->getPriority(finalSchedule, true);
-            currShifts++;
-        }
-        // for calculating total averages
-        totalPriority += currPriority;
-        totalShifts += currShifts;
-
-        double currValue = currPriority / (double)currShifts;
-
-        if (firstWorker or currValue < leastPriority) {
-            leastPriority = currValue;
-            leastIndex = i;
-        }
-        if (firstWorker or currValue > mostPriority) {
-            mostPriority = currValue;
-            mostIndex = i;
-        }
-
-        firstWorker = false;
-    }
-    return totalPriority / (double)totalShifts;
-}
-
-
-
+// prints the final schedule according to what has been calculated
 void Scheduler::printFinalSchedule(ostream &output) {
     for (int i = 0; i < NUM_DAYS; i++) {
         for (int j = 0; j < MAX_SHIFTS; j++) {
             sort(finalSchedule[i][j].begin(), finalSchedule[i][j].end(),
-                 orderWorkers);
+                 sortAlphabetical);
         }
     }
     schedulePrinter.printSchedule(output, finalSchedule);
 }
 
+bool Scheduler::sortAlphabetical(TimeSlotNode *t1, TimeSlotNode *t2) {
+    return (t1->getParent()->getName() < t2->getParent()->getName());
+}
+
 // prints all the workers available at each time slot
-// Timeslot focused printing
 void Scheduler::printScheduleShifts(ostream &output) {
     // printSchedule(output, workersAvailable);
     schedulePrinter.printSchedule(output, inputData.getWorkersAvailable());
 }
 
+// printing all basic worker info (name, max num shifts, total available shifts)
+void Scheduler::printWorkers(ostream &output) {
+    int n = inputData.getNumWorkers();
+    for (int i = 0; i < n; i++) {
+        inputData.getWorker(i)->printBasic(output);
+    }
+}
 
-bool Scheduler::orderWorkers(TimeSlotNode *t1, TimeSlotNode *t2) {
-    return (t1->getParent()->getName() < t2->getParent()->getName());
+// printing all worker info, including all shifts
+void Scheduler::printWorkerShifts(ostream &output) {
+    int n = inputData.getNumWorkers();
+    for (int i = 0; i < n; i++) {
+        inputData.getWorker(i)->printFull(output);
+    }
+}
+
+// prints all workers and how many shifts they're scheduled for, as well
+// as how that number compares to their desired max shifts
+void Scheduler::printWorkerShiftNum(ostream &output) {
+    int n = inputData.getNumWorkers();
+    for (int i = 0; i < n; i++) {
+        WorkerNode *currWorker = inputData.getWorker(i);
+        output << currWorker->getName() << " on "
+               << currWorker->getMaxShifts() - currWorker->getShiftsRemaining()
+               << " out of " << currWorker->getMaxShifts() 
+               << " shifts" <<  endl;
+    }
 }

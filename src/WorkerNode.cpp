@@ -83,6 +83,9 @@ void WorkerNode::addLikedCoworker(WorkerNode *newWorker) {
 
 void WorkerNode::allocateBlock(TimeSlotNode *toChoose) {
     updateShiftsRemaining(-1); // removing a block
+    if (toChoose->getUsed()) {
+        cerr << "PROBLEM: ALREADY USED: " << toChoose->getParent() << endl;
+    }
     toChoose->setUsed(true);
 
     for (auto it = timesAvailable.begin(); it != timesAvailable.end(); it++) {
@@ -96,6 +99,10 @@ void WorkerNode::allocateBlock(TimeSlotNode *toChoose) {
 
 void WorkerNode::deallocateBlock(TimeSlotNode *toRemove) {
     updateShiftsRemaining(1); // removing a block
+    if (!toRemove->getUsed()) {
+        cerr << "PROBLEM: NOT USED: " << toRemove->getParent() << endl;
+    }
+
     toRemove->setUsed(false);
 
     for (auto it = timesAllocated.begin(); it != timesAllocated.end(); it++) {

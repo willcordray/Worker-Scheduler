@@ -25,71 +25,78 @@ using namespace std;
 
 class Scheduler {
 public:
+    /******************************* Constructor ******************************/
     Scheduler(WorkerInputData &data, unsigned int newSeed);
 
-    void validate(ostream &output);
-
+    /*************************** Schedule Population **************************/
     void calculate();
 
+    /******************************* Statistics *******************************/
     double getAverage();
     int getRange();
     double getLeastHappy();
 
+    /******************************** Printing ********************************/
+    void printStats(ostream &output);
+
+    void printFinalSchedule(ostream &output);
+    void printScheduleShifts(ostream &output);
+
     void printWorkers(ostream &output);
     void printWorkerShifts(ostream &output);
-    void printScheduleShifts(ostream &output);
     void printWorkerShiftNum(ostream &output);
-    void printStats(ostream &output);
-    void printFinalSchedule(ostream &output);
 
 private:
-
     WorkerInputData &inputData;
     PrintSchedule schedulePrinter;
 
-    vector<vector<vector<TimeSlotNode *>>> finalSchedule; // [NUM_DAYS][MAX_SHIFTS]
+    vector<vector<vector<TimeSlotNode *>>> finalSchedule = vector<vector<vector<TimeSlotNode *>>>(NUM_DAYS, vector<vector<TimeSlotNode *>>(MAX_SHIFTS)); // [NUM_DAYS][MAX_SHIFTS]
+
+    const double tinyChangeDivisor = 1'000'000;
+    bool calculated;    // whether schedule has been calculated
+    unsigned int seed;  // seed of this run
 
 
+    /******************************* Constructor ******************************/
     void addTinyPriorityChange(unsigned int randSeed);
 
-    void validateSolution();
-
-
-
+    /*************************** Schedule Population **************************/
     void addAllocation(TimeSlotNode *toAssign);
     void removeAllocation(TimeSlotNode *toRemove);
 
     void initialAllocation();
-    void initialOneSlot(vector<TimeSlotNode *> *currQueue);
-    TimeSlotNode * findMaxTimeSlot(vector<TimeSlotNode *> *currQueue);
+    void initialOneSlot(const vector<TimeSlotNode *> &currQueue);
+    TimeSlotNode *findMaxTimeSlotPriority(const vector<TimeSlotNode *> &currQueue);
 
     void graphBalance();
-    bool findMinMaxWorker(WorkerNode **min, WorkerNode **max);
+    bool findMinMaxWorkerBooking(WorkerNode **min, WorkerNode **max);
 
     bool searchWorker(WorkerNode *currWorker);
-    pair<double, TimeSlotNode *> findPath(TimeSlotNode *overbooked);
-    void findNeighbors(vector<TimeSlotNode *> &neighbors, TimeSlotNode *initial);
-    vector<TimeSlotNode *> buildPath(TimeSlotNode *end);
-
-    void resetSeen();
-    void resetPrev();
+    void resetSearchValues();
     void resetNoPath();
-    void makeChanges(vector<TimeSlotNode *> path);
+    pair<double, TimeSlotNode *> findPath(TimeSlotNode *overbooked);
+    void findNodeToAdd(priority_queue<pair<double, TimeSlotNode *>> &paths, pair<double, TimeSlotNode *> &bestPath, pair<double, TimeSlotNode *> currPath, TimeSlotNode *start);
+    void findNodeToDrop(priority_queue<pair<double, TimeSlotNode *>> &paths, TimeSlotNode *neighbor, double currPathValue);
+    bool validPath(TimeSlotNode *start, TimeSlotNode *end);
 
-    // stats
+    void buildPath(vector<TimeSlotNode *> &path, TimeSlotNode *end);
+    void makeChanges(vector<TimeSlotNode *> &path);
+
+
+    /******************************* Validation *******************************/
+    void validateSolution();
+    void validateWorkersOnShift();
+    void validateNoDuplicateWorkers();
+    void validateUsed();
+
+    /******************************* Statistics *******************************/
     double findAverage(int &leastIndex,
                        int &mostIndex,
                        double &leastPriority, double &mostPriority);
 
 
-    // helper functions for final scheduler printing
-    static bool orderWorkers(TimeSlotNode *t1, TimeSlotNode *t2);
-
-
-    const double tinyChangeDivisor = 1'000'000;
-    bool calculated;    // whether schedule has been calculated
-    unsigned int seed;  // seed of this run
-    int numPaths = 0;
+    /******************************** Printing ********************************/
+    static bool sortAlphabetical(TimeSlotNode *t1, TimeSlotNode *t2);
 };
 
 #endif

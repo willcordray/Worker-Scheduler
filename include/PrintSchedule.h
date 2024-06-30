@@ -14,11 +14,11 @@
 class PrintSchedule {
 public:
     void printSchedule(ostream &output,
-                    vector<vector<vector<TimeSlotNode *>>> &workers);
+                    const vector<vector<vector<TimeSlotNode *>>> &workers);
 
 private:
     void determineMaxSize(vector<int> &maxSize,
-                          vector<vector<vector<TimeSlotNode *>>> &workers);
+                          const vector<vector<vector<TimeSlotNode *>>> &workers);
     void printBlankline(ostream &output, vector<int> &maxSize);
     void printDashes(ostream &output, int numDashes);
     void printEven(ostream &output, string toPrint, int size);

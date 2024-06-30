@@ -13,6 +13,7 @@ TimeSlotNode::TimeSlotNode(WorkerNode *newParent, int newDay, int newShift,
 void TimeSlotNode::resetRunValues() {
     used = false;
     seen = false;
+    prev = nullptr;
 }
 
 bool TimeSlotNode::operator==(const TimeSlotNode &other) const {

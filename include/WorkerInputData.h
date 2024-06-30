@@ -23,8 +23,8 @@ public:
     void resetValues();
     ~WorkerInputData();
 
-    vector<vector<vector<TimeSlotNode *>>> &getWorkersAvailable();
-    vector<TimeSlotNode *> &getWorkersAvailable(int day, int shift);
+    const vector<vector<vector<TimeSlotNode *>>> &getWorkersAvailable();
+    const vector<TimeSlotNode *> &getWorkersAvailable(int day, int shift);
     int getWorkersPerShift(int day, int shift);
     vector<WorkerNode *> &getWorkerList();
     WorkerNode *getWorker(int listIndex);

@@ -322,11 +322,11 @@ void WorkerInputData::validateWorkersRequired(ostream &output) {
 
 /***************************** Getters and Setters ****************************/
 
-vector<vector<vector<TimeSlotNode *>>> &WorkerInputData::getWorkersAvailable() {
+const vector<vector<vector<TimeSlotNode *>>> &WorkerInputData::getWorkersAvailable() {
     return workersAvailable;
 }
 
-vector<TimeSlotNode *> &WorkerInputData::getWorkersAvailable(int day, int shift) {
+const vector<TimeSlotNode *> &WorkerInputData::getWorkersAvailable(int day, int shift) {
     return workersAvailable[day][shift];
 }
 

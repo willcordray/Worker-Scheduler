@@ -43,12 +43,6 @@ static const double averageProportion = 0.7; // average priority (happiness) of 
 static const double lowestProportion = 0.2; // priority of lowest TA
 static const double overbookedRange = 0.1; // difference between most overbooked and least overbooked TA
 
-int toCombined(const int days, const int shift, int shifts_per_day[]);
-void toDaysAndShift(int combined, int &days, int &shift, int shifts_per_day[]);
-
-int dayString_to_int(string dayName);
-int shiftString_to_int(string shiftName);
-
 
 #endif
 
