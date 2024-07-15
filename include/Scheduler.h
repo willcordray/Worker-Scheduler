@@ -50,7 +50,7 @@ private:
     WorkerInputData &inputData;
     PrintSchedule schedulePrinter;
 
-    vector<vector<vector<TimeSlotNode *>>> finalSchedule = vector<vector<vector<TimeSlotNode *>>>(NUM_DAYS, vector<vector<TimeSlotNode *>>(MAX_SHIFTS)); // [NUM_DAYS][MAX_SHIFTS]
+    vector<vector<vector<TimeSlotNode *>>> finalSchedule = vector<vector<vector<TimeSlotNode *>>>(NUM_DAYS, vector<vector<TimeSlotNode *>>(MAX_SHIFTS));
 
     const double tinyChangeDivisor = 1'000'000;
     bool calculated;    // whether schedule has been calculated

@@ -269,11 +269,12 @@ void Scheduler::findNodeToAdd(priority_queue<pair<double, TimeSlotNode *>> &path
     // don't want to change the booking of the neighbor, so find another 
     //shift they are on and remove it.
     for (size_t i = 0; i < neighbors.size(); i++) {
-        if (!neighbors[i]->getSeen() && !neighbors[i]->getUsed()) { // not already on a path
+        // not already on a path, and a possible replacement for initial
+        if (!neighbors[i]->getSeen() && !neighbors[i]->getUsed()) {
             neighbors[i]->setPrev(currPath.second);
             neighbors[i]->setSeen(true);
 
-            // if underbooked person, valid path
+            // check to see if at the end of a valid path
             if (validPath(start, neighbors[i])) {
                 double pathValue = currPath.first + neighbors[i]->getMemoizedPriority(false);
                 if (bestPath.second == nullptr or pathValue > bestPath.first) {
@@ -281,7 +282,7 @@ void Scheduler::findNodeToAdd(priority_queue<pair<double, TimeSlotNode *>> &path
                 }
             }
 
-            // shift to remove from the same person
+            // shift to remove from the same person to balance shift numbers
             findNodeToDrop(paths, neighbors[i], currPath.first);
         }
     }
@@ -493,6 +494,7 @@ double Scheduler::findAverage(int &leastIndex, int &mostIndex,
 
 /********************************** Printing **********************************/
 
+// TODO: add range to stats printing
 // average priority
 // most satisfied worker
 // least satisfied worker
